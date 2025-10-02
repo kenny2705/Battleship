@@ -10,18 +10,21 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import models.Casilla;
 import models.Jugador;
 import models.Tablero;
+import models.TableroObservador;
 import org.netbeans.lib.awtextra.AbsoluteConstraints;
 
 /**
  *
  * @author Usuario
  */
-public class PanelJuego extends javax.swing.JFrame {
+public class PanelJuego extends javax.swing.JFrame implements TableroObservador{
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(PanelJuego.class.getName());
 
@@ -33,9 +36,14 @@ public class PanelJuego extends javax.swing.JFrame {
         initComponents();
         this.jugador = jugador;
         this.controlVista = new ControlVista(controlJuego);
-        // Genera tablero inicial
-        //controlVista.generarTablero(jugador.getTableros().get(0), panelTablero);
-        controlVista.generarTablero(jugador.getTableros().get(0), panelTablero, controlJuego);
+        this.controlJuego = controlJuego;
+        
+        Tablero tablero = jugador.getTableros().get(0);
+        tablero.inicializarCasillas();
+        tablero.colocarNavesEnCasillas();
+        tablero.addObservador(this);
+        controlVista.generarTablero(tablero, panelTablero);
+        
     }
     
       /**
@@ -65,8 +73,13 @@ public class PanelJuego extends javax.swing.JFrame {
         });
     }
 
-    
+    public void actualizarTablero(Tablero tablero, String mensaje) {
+        // Actualiza los íconos de los botones según el estado del modelo
+        controlVista.actualizarBotones(tablero);
 
+        // Puedes imprimir el mensaje de notificación si quieres
+        System.out.println("Notificación recibida: " + mensaje);
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -102,4 +115,5 @@ public class PanelJuego extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel panelTablero;
     // End of variables declaration//GEN-END:variables
+
 }

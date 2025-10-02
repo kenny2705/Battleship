@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controllers;
 
 import java.util.ArrayList;
@@ -70,38 +66,29 @@ public class ControlJuego {
         return jugador;
     }
     
-    public ResultadoDisparo realizarDisparo (Tablero tablero, String coordenada){
-         // Buca una casilla
-        Optional<Casilla> casillaOpt = tablero.getMatrizDeCasillas().stream()
+    public ResultadoDisparo realizarDisparo(Tablero tablero, String coordenada) {
+        Casilla casilla = tablero.getMatrizDeCasillas()
+                .stream()
                 .filter(c -> c.getCoordenada().equals(coordenada))
-                .findFirst();
+                .findFirst()
+                .orElseThrow();
+        casilla.setDañada(true);
 
-        if (casillaOpt.isEmpty()) {
-            return ResultadoDisparo.AGUA; // Coordenada inválida → lo tratamos como agua
-        }
-
-        Casilla casilla = casillaOpt.get();
-
+        ResultadoDisparo resultado;
         if (casilla.isOcupada()) {
-            casilla.setDañada(true);
-
-            // Buscar la nave a la que pertenece esta casilla
-            for (Nave nave : tablero.getNaves()) {
-                if (nave.getCoordenadas().contains(coordenada)) {
-                    nave.setImpactos(nave.getImpactos() + 1);
-
-                    if (nave.getImpactos() == nave.getCoordenadas().size()) {
-                        nave.setEstadoNave(EstadoNave.HUNDIDA);
-                        return ResultadoDisparo.HUNDIDO;
-                    } else {
-                        nave.setEstadoNave(EstadoNave.DAÑADA);
-                        return ResultadoDisparo.IMPACTO;
-                    }
-                }
-            }
+            resultado = ResultadoDisparo.IMPACTO;
+            // Aquí puedes agregar lógica para cambiar a HUNDIDO si todas las casillas de la nave están dañadas
+        } else {
+            resultado = ResultadoDisparo.AGUA;
         }
 
-        // No había nave en la casilla
-        return ResultadoDisparo.AGUA;
+        // Notificar a los observadores con mensaje completo
+        tablero.notificarObservadores("Disparo en " + coordenada + ": " + resultado);
+
+        return resultado;
+
+        //tablero.notificarObservadores("Disparo en " + coordenada);
+        //return casilla.isOcupada() ? ResultadoDisparo.IMPACTO : ResultadoDisparo.AGUA;
     }
+    
 }

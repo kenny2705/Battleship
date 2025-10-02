@@ -1,23 +1,21 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package models;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  *
  * @author Usuario
  */
-public class Tablero {
+public class Tablero{
     private int medidas;
     private List<Casilla> matrizDeCasillas;
     private Jugador jugador;
     private List<Nave> naves;
     private List<Disparo> disparos;
 
-    //Observadores 
+    //Logica del Patron observador parte 1
+    private final List<TableroObservador> observadores = new ArrayList<>();
     public Tablero() {
     }
 
@@ -70,14 +68,14 @@ public class Tablero {
     }
     
     public void colocarNavesEnCasillas() {
-    if (naves == null || naves.isEmpty()) {
-        return;
-    }
+        if (naves == null || naves.isEmpty()) {
+            return;
+        }
 
         for (Nave nave : naves) {
-            for (String coord : nave.getCoordenadas()) {
+            for (String coordenada : nave.getCoordenadas()) {
                 for (Casilla casilla : matrizDeCasillas) {
-                    if (casilla.getCoordenada().equals(coord)) {
+                    if (casilla.getCoordenada().equals(coordenada)) {
                         casilla.setOcupada(true);
                         break;
                     }
@@ -86,5 +84,29 @@ public class Tablero {
         }
     }
     
+    //Logica del patron observador parte2
+    public void addObservador(TableroObservador observador){
+        observadores.add(observador);
+    }
     
+    public void removeObservador(TableroObservador observador){
+        observadores.remove(observador);
+    }
+    
+    public void notificarObservadores(String mensaje){
+        for (TableroObservador observador : observadores) {
+            observador.actualizarTablero(this, mensaje);
+        }
+    }
+    
+    public void inicializarCasillas() {
+    matrizDeCasillas = new ArrayList<>();
+    for (int fila = 0; fila < medidas; fila++) {
+        for (int col = 0; col < medidas; col++) {
+            String coordenada = "" + (char)('A' + fila) + (col + 1);
+            matrizDeCasillas.add(new Casilla(coordenada, false, false));
+        }
+    }
+}
+
 }

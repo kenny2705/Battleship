@@ -1,6 +1,6 @@
+models\TableroObservador.class
 models\enums\TipoNave.class
 models\Casilla.class
-controllers\ControlVista$1.class
 models\Partida.class
 models\enums\EstadoPartida.class
 models\Tablero.class

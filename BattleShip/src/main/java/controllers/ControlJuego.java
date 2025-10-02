@@ -77,12 +77,12 @@ public class ControlJuego {
         ResultadoDisparo resultado;
         if (casilla.isOcupada()) {
             resultado = ResultadoDisparo.IMPACTO;
-            // Aquí puedes agregar lógica para cambiar a HUNDIDO si todas las casillas de la nave están dañadas
+            // Logica para cambiar a HUNDIDO si todas las casillas de la nave estan dañadas
         } else {
             resultado = ResultadoDisparo.AGUA;
         }
 
-        // Notificar a los observadores con mensaje completo
+        // Notificar a los observadores
         tablero.notificarObservadores("Disparo en " + coordenada + ": " + resultado);
 
         return resultado;

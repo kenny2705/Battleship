@@ -1,0 +1,8 @@
+com\mycompany\p2p\PeerInfo.class
+com\mycompany\p2p\P2PEvent.class
+com\mycompany\p2p\ClientPeer.class
+com\mycompany\p2p\MessageListener.class
+com\mycompany\p2p\ServerPeer.class
+com\mycompany\p2p\ConnectionListener.class
+com\mycompany\p2p\P2PManager.class
+com\mycompany\p2p\P2PEventListener.class

@@ -18,6 +18,7 @@ import models.enums.TipoNave;
 public class ControlJuego {
     
     private Jugador jugador;
+    private ControlVista controlVista;
 
     public ControlJuego() {
         creaTablero();
@@ -25,6 +26,14 @@ public class ControlJuego {
     
     public ControlJuego(Jugador jugador) {
         creaTablero();
+    }
+
+    public ControlVista getControlVista() {
+        return controlVista;
+    }
+
+    public void setControlVista(ControlVista controlVista) {
+        this.controlVista = controlVista;
     }
     
     private void creaTablero(){

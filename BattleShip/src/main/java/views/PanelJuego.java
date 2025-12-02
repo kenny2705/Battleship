@@ -35,15 +35,18 @@ public class PanelJuego extends javax.swing.JFrame implements TableroObservador{
     public PanelJuego(Jugador jugador, ControlJuego controlJuego) {
         initComponents();
         this.jugador = jugador;
-        this.controlVista = new ControlVista(controlJuego);
         this.controlJuego = controlJuego;
-        
+
+        // NO CREES un nuevo ControlVista
+        // Usa el que ya tienes: controlJuego.getControlVista()
+        this.controlVista = controlJuego.getControlVista();
+
         Tablero tablero = jugador.getTableros().get(0);
         tablero.inicializarCasillas();
         tablero.colocarNavesEnCasillas();
         tablero.addObservador(this);
+
         controlVista.generarTablero(tablero, panelTablero);
-        
     }
     
       /**

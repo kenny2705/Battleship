@@ -1,3 +1,4 @@
+views\Acomodo.class
 infraestructura\P2PManager.class
 models\TableroObservador.class
 models\enums\TipoNave.class
@@ -16,9 +17,9 @@ models\Partida.class
 infraestructura\ConnectionListener.class
 models\Tablero.class
 models\Jugador.class
-controllers\ControlVista$4.class
 infraestructura\MessageListener.class
 models\Disparo.class
+views\Acomodo$1.class
 com\mycompany\battleship\Battleship.class
 models\enums\EstadoNave.class
 views\PanelJuego.class

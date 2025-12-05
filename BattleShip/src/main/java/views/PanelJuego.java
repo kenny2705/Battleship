@@ -29,24 +29,28 @@ public class PanelJuego extends javax.swing.JFrame implements TableroObservador{
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(PanelJuego.class.getName());
 
     private Jugador jugador;
+    // La instancia de ControlVista se recibe directamente:
     private ControlVista controlVista;
     private ControlJuego controlJuego;
 
-    public PanelJuego(Jugador jugador, ControlJuego controlJuego) {
+    // Se agrega el ControlVista al constructor, forzando a que se pase la instancia correcta.
+    public PanelJuego(Jugador jugador, ControlJuego controlJuego, ControlVista controlVista) {
         initComponents();
         this.jugador = jugador;
         this.controlJuego = controlJuego;
 
-        // NO CREES un nuevo ControlVista
-        // Usa el que ya tienes: controlJuego.getControlVista()
-        this.controlVista = controlJuego.getControlVista();
+        // **CORRECCIÓN CLAVE:** Asigna la instancia de ControlVista que se pasa
+        // Esto garantiza que es la instancia principal y no una referencia nula.
+        this.controlVista = controlVista;
 
         Tablero tablero = jugador.getTableros().get(0);
         tablero.inicializarCasillas();
         tablero.colocarNavesEnCasillas();
         tablero.addObservador(this);
 
-        controlVista.generarTablero(tablero, panelTablero);
+        // Línea que fallaba, ahora usando la referencia no nula:
+        // (Asumo que esta línea es aproximadamente la 49 de tu archivo original)
+        this.controlVista.generarTablero(tablero, panelTablero);
     }
     
       /**
@@ -64,14 +68,23 @@ public class PanelJuego extends javax.swing.JFrame implements TableroObservador{
         } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
             logger.log(java.util.logging.Level.SEVERE, null, ex);
         }
+
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> {
-            // Usamos el controlador, que ya inicializa todo
+            // 1. Inicializar el ControlJuego. 
+            // (Asumo que ControlJuego inicializa ControlVista dentro de su constructor).
             ControlJuego controlJuego = new ControlJuego();
+
+            // 2. Obtener la instancia de ControlVista creada por ControlJuego
+            // Nota: Si ControlJuego no tiene un getControlVista(), usa la forma de inicialización 
+            // de la siguiente sección (Opción 2).
+            ControlVista controlVista = controlJuego.getControlVista(); // <-- Requiere este método en ControlJuego
+
+            // 3. Obtener el Jugador
             Jugador jugador = controlJuego.getJugador();
 
-            // Creamos la ventana
-            PanelJuego panel = new PanelJuego(jugador, controlJuego);
+            // 4. Creamos la ventana con los tres parámetros requeridos.
+            PanelJuego panel = new PanelJuego(jugador, controlJuego, controlVista); // ¡CORRECCIÓN AQUÍ!
             panel.setVisible(true);
         });
     }

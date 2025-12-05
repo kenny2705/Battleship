@@ -23,15 +23,12 @@ public class P2PManager {
     private ConnectionListener connectionListener;
     private MessageListener messageListener;
 
-    public P2PManager() {
-    }
+    private boolean serverStarted = false;  // ★ EVITA SPAM
 
-    // Listener de conexión
     public void setConnectionListener(ConnectionListener listener) {
         this.connectionListener = listener;
     }
 
-    // Listener de mensajes
     public void setMessageListener(MessageListener listener) {
         this.messageListener = listener;
     }
@@ -39,19 +36,28 @@ public class P2PManager {
     // ------------------------------
     //  MODO SERVIDOR
     // ------------------------------
-    public void startAsServer() {
+    public synchronized void startAsServer() {
+
+        // ★ SI YA HAY SERVIDOR ACTIVADO → NO ARRANCAR OTRA VEZ
+        if (serverStarted) {
+            System.out.println("DEBUG: Servidor ya estaba iniciado, NO se inicia otra vez.");
+            return;
+        }
+
         try {
             ServerPeer server = new ServerPeer(5000, connectionListener, messageListener);
             serverRef.set(server);
 
-            server.start(); // CORRECTO
+            server.start();  // Solo se ejecuta una vez
+
+            serverStarted = true;  // ★ Marcar como iniciado
 
         } catch (IOException ex) {
             throw new RuntimeException("Error al iniciar el servidor", ex);
         }
     }
 
-    // Este método es NECESARIO para mostrar el ID
+    // Este método NO causa spam si startAsServer() se ejecuta solo una vez
     public String getServerId() {
         ServerPeer server = serverRef.get();
         if (server != null) {
@@ -64,9 +70,6 @@ public class P2PManager {
         return null;
     }
 
-    // ------------------------------
-    //  MODO CLIENTE
-    // ------------------------------
     public void connectToServer(String serverId) throws Exception {
 
         String[] parts = serverId.split(":");
@@ -80,12 +83,9 @@ public class P2PManager {
         ClientPeer client = new ClientPeer(host, port, connectionListener, messageListener);
         clientRef.set(client);
 
-        client.start(); // CORRECTO
+        client.start();
     }
 
-    // --------------------------------
-    // ENVÍO DE MENSAJES
-    // --------------------------------
     public void sendMessage(String msg) throws IOException {
         if (serverRef.get() != null && serverRef.get().isConnected()) {
             serverRef.get().send(msg);
@@ -96,10 +96,9 @@ public class P2PManager {
         }
     }
 
-    // --------------------------------
-    // DETENER
-    // --------------------------------
-    public void stop() {
+    public synchronized void stop() {
+
+        serverStarted = false; // ★ Permitir iniciar de nuevo
 
         if (serverRef.get() != null) {
             serverRef.get().stopServer();

@@ -55,12 +55,22 @@ public class Menu extends javax.swing.JFrame {
             );
 
             if (serverId != null && !serverId.trim().isEmpty()) {
+                 System.out.println("Intentando conectarme al servidor con ID: " + serverId);
                 controlVista.unirseAPartida(serverId);
                 
             }
         });
 
         btnSalir.addActionListener(e -> System.exit(0));
+    }
+      private void abrirPantallaAcomodo() {
+        System.out.println(">>> Abriendo pantalla de acomodo...");
+
+        Acomodo view = new Acomodo();
+        view.setVisible(true);
+
+        // Cierra la pantalla actual
+        this.dispose();
     }
     /**
      * This method is called from within the constructor to initialize the form.

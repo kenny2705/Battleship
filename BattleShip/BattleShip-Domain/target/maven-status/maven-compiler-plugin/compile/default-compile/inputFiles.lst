@@ -1,0 +1,17 @@
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\enums\EstadoNave.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\enums\EstadoPartida.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\enums\ResultadoDisparo.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\enums\TipoNave.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\Casilla.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\Disparo.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\exceptions\PartidaNoActivaException.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\exceptions\PosicionInvalidaException.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\exceptions\TurnoInvalidoException.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\Jugador.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\Marcador.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\Nave.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\Partida.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\PartidaObservador.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\Tablero.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\model\TableroObservador.java
+C:\Users\Usuario\Documents\NetBeansProjects\ProyectoBattleships\BattleShip-Domain\src\main\java\battleship\domain\repository\PartidaRepository.java

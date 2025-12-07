@@ -12,11 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.SwingConstants;
 import models.Casilla;
 import models.Jugador;
 import models.Nave;
@@ -27,56 +24,62 @@ import models.Tablero;
  * @author Acer
  */
 public class Acomodo extends javax.swing.JFrame {
+
     private ControlJuego controlJuego;
     private ControlVista controlVista;
     private Jugador jugador;
 
     // Componentes UI
     private JPanel panelTablero;
-    private JPanel panelNaves; // Nuevo panel para mostrar y seleccionar naves
+    private JPanel panelNaves;
     private JButton btnListo;
-    private JButton btnOrientacion; // Botón para cambiar la orientación
-    private final Map<String, JButton> botonesCasillas = new HashMap<>();
+    private JButton btnOrientacion;
+    private final Map<String, JButton> botonesCasillas = new HashMap<String, JButton>();
 
     // Estado local para la Interacción de la Vista (Bajo acoplamiento)
     private Nave naveSeleccionada = null;
     private int orientacion = 0; // 0=Horizontal, 1=Vertical
 
-    // Constructor completo (usado por ControlVista)
-    public Acomodo(ControlJuego controlJuego, ControlVista controlVista) {
+    // CONSTRUCTOR CORREGIDO: Ahora acepta 3 argumentos
+    public Acomodo(Jugador jugador, ControlJuego controlJuego, ControlVista controlVista) {
+        // Almacenar las referencias
+        this.jugador = jugador;
         this.controlJuego = controlJuego;
         this.controlVista = controlVista;
-        this.jugador = controlJuego.getJugador();
 
         initComponents();
         inicializarComponentesPersonalizados();
         cargarTableroInicial();
         cargarNavesDisponibles();
-        btnListo.setEnabled(false); // Deshabilitar hasta que todas las naves estén colocadas
     }
 
     // Constructor sin parámetros (mantener para el IDE)
     public Acomodo() {
         initComponents();
-        // Solo para pruebas en el main, inicializar con mock data si es necesario
     }
 
     // --- LÓGICA DE LA VISTA (Solo Interacción y Presentación) ---
     private void inicializarComponentesPersonalizados() {
-        setTitle("Acomodo de Naves - Jugador: " + jugador.getId());
+        if (jugador != null) {
+            setTitle("Acomodo de Naves - " + jugador.getNombre());
+        } else {
+            setTitle("Acomodo de Naves");
+        }
 
         // Contenedores principales
         getContentPane().setLayout(new java.awt.BorderLayout(10, 10)); // Espaciado
 
-        // Panel Central para el Tablero
+        Tablero tablero = jugador != null ? jugador.getTablero() : new Tablero(10, null);
+        int n = tablero.getMedidas();
+
         panelTablero = new JPanel();
-        panelTablero.setLayout(new GridLayout(jugador.getTableros().get(0).getMedidas(), jugador.getTableros().get(0).getMedidas()));
-        panelTablero.setPreferredSize(new Dimension(500, 500));
+        panelTablero.setLayout(new GridLayout(n, n));
+        panelTablero.setPreferredSize(new Dimension(550, 550)); // Un poco más grande para que quepan bien
 
         // Panel Derecho para Controles (Naves y Botones)
         JPanel panelControles = new JPanel();
         panelControles.setLayout(new javax.swing.BoxLayout(panelControles, javax.swing.BoxLayout.Y_AXIS));
-        panelControles.setPreferredSize(new Dimension(200, 500));
+        panelControles.setPreferredSize(new Dimension(220, 500));
 
         // Panel para Naves
         panelNaves = new JPanel();
@@ -92,6 +95,7 @@ public class Acomodo extends javax.swing.JFrame {
         // Botón Listo
         btnListo = new JButton("Listo para Batalla");
         btnListo.addActionListener(this::btnListoActionPerformed);
+        btnListo.setEnabled(false); // Se habilita solo al completar
         panelControles.add(btnListo);
 
         // Añadir componentes al JFrame
@@ -103,18 +107,20 @@ public class Acomodo extends javax.swing.JFrame {
     }
 
     private void cambiarOrientacion() {
-        orientacion = 1 - orientacion; // Cambia entre 0 (Horizontal) y 1 (Vertical)
+        orientacion = 1 - orientacion;
         String texto = orientacion == 0 ? "Horizontal" : "Vertical";
         btnOrientacion.setText("Orientación: " + texto);
 
-        // Opcional: Recalcar la nave seleccionada
         if (naveSeleccionada != null) {
             JOptionPane.showMessageDialog(this, "Orientación cambiada a: " + texto + " para la nave " + naveSeleccionada.getTipo(), "Orientación", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     private void cargarTableroInicial() {
-        Tablero tablero = jugador.getTableros().get(0);
+        if (jugador == null || jugador.getTablero() == null) {
+            return;
+        }
+        Tablero tablero = jugador.getTablero();
         int n = tablero.getMedidas();
 
         for (int fila = 0; fila < n; fila++) {
@@ -122,13 +128,17 @@ public class Acomodo extends javax.swing.JFrame {
                 String coordenada = convertirCoordenada(fila, col);
                 JButton btn = new JButton(coordenada);
                 btn.setPreferredSize(new Dimension(50, 50));
-                btn.setBackground(java.awt.Color.CYAN); // Color de agua inicial
-                btn.setOpaque(true);
-                btn.setBorderPainted(false);
 
-                // Evento de clic en la casilla para colocar naves
+                // --- CORRECCIÓN VISUAL: Evita que salgan "..." en A10 ---
+                btn.setMargin(new java.awt.Insets(0, 0, 0, 0)); // Márgenes a 0
+                btn.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 10)); // Fuente pequeña y legible
+                // --------------------------------------------------------
+
+                btn.setBackground(java.awt.Color.CYAN);
+                btn.setOpaque(true);
+                btn.setBorderPainted(true);
+
                 btn.addActionListener(e -> {
-                    // La vista solo informa la intención de colocar en (coordenada)
                     intentarColocarNave(coordenada);
                 });
 
@@ -140,11 +150,16 @@ public class Acomodo extends javax.swing.JFrame {
 
     private void cargarNavesDisponibles() {
         panelNaves.removeAll();
+        if (jugador == null) {
+            return;
+        }
+
         List<Nave> navesDisponibles = jugador.getNaves();
 
         if (navesDisponibles != null) {
             for (Nave nave : navesDisponibles) {
-                if (!nave.isColocada()) { // Solo muestra las no colocadas
+                // Solo mostrar naves que NO han sido colocadas
+                if (!nave.isColocada()) {
                     JButton btnNave = new JButton(nave.getTipo() + " (" + nave.getTamanio() + ")");
                     btnNave.addActionListener(e -> seleccionarNave(nave, btnNave));
                     panelNaves.add(btnNave);
@@ -152,22 +167,27 @@ public class Acomodo extends javax.swing.JFrame {
             }
         }
 
-        // Selecciona automáticamente la primera si no hay ninguna seleccionada
-        if (naveSeleccionada == null && navesDisponibles != null && !navesDisponibles.isEmpty()) {
-            seleccionarNave(navesDisponibles.stream().filter(n -> !n.isColocada()).findFirst().orElse(null), null);
+        // Lógica de autoselección
+        if (naveSeleccionada == null && navesDisponibles != null) {
+            // Seleccionar la primera no colocada
+            for (Nave n : navesDisponibles) {
+                if (!n.isColocada()) {
+                    seleccionarNave(n, null);
+                    break;
+                }
+            }
         }
 
         panelNaves.revalidate();
         panelNaves.repaint();
     }
 
-    // Método para manejar la selección de una nave
     private void seleccionarNave(Nave nave, JButton clickedButton) {
         if (nave == null || nave.isColocada()) {
             return;
         }
 
-        // Resetea el color del botón previamente seleccionado
+        // Resetear colores visuales en panelNaves
         for (java.awt.Component comp : panelNaves.getComponents()) {
             if (comp instanceof JButton) {
                 ((JButton) comp).setBackground(null);
@@ -176,67 +196,61 @@ public class Acomodo extends javax.swing.JFrame {
 
         naveSeleccionada = nave;
         if (clickedButton != null) {
-            clickedButton.setBackground(java.awt.Color.YELLOW); // Resalta la nave seleccionada
+            clickedButton.setBackground(java.awt.Color.YELLOW);
             clickedButton.setOpaque(true);
         }
 
         JOptionPane.showMessageDialog(this,
-                "Nave seleccionada: " + naveSeleccionada.getTipo() + ". Haz clic en el tablero para colocarla.",
+                "Nave seleccionada: " + naveSeleccionada.getTipo() + " (Tam: " + nave.getTamanio() + ").\nHaz clic en el tablero para colocarla.",
                 "Selección",
                 JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // Simula la colocación de una nave al hacer clic en una casilla
     private void intentarColocarNave(String coordenadaInicio) {
         if (naveSeleccionada == null) {
             JOptionPane.showMessageDialog(this, "Selecciona una nave primero.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        if (jugador == null || jugador.getTablero() == null) {
+            return;
+        }
 
-        Tablero tablero = jugador.getTableros().get(0);
+        Tablero tablero = jugador.getTablero();
 
-        // **ALTA COHESIÓN**: La validación y colocación es responsabilidad del ControlJuego.
-        // La vista solo pasa los datos de la interacción.
         boolean colocada = controlJuego.colocarNave(tablero, naveSeleccionada, coordenadaInicio, orientacion);
 
         if (colocada) {
-            // Éxito: Actualizar UI y pasar a la siguiente nave
             actualizarVistaTablero(tablero);
+            cargarNavesDisponibles(); // Esto eliminará el botón de la nave colocada del panel lateral
 
-            // Recargar panel de naves (la nave colocada desaparecerá)
-            cargarNavesDisponibles();
+            // Deseleccionar para obligar a elegir la siguiente
+            naveSeleccionada = null;
 
-            // Verificar si el acomodo está completo
             if (controlJuego.verificarAcomodoCompleto(jugador)) {
                 JOptionPane.showMessageDialog(this, "Todas las naves han sido colocadas. ¡Listo para la batalla!", "Acomodo Completo", JOptionPane.INFORMATION_MESSAGE);
                 btnListo.setEnabled(true);
-            } else {
-                JOptionPane.showMessageDialog(this, "Coloca la siguiente nave.", "Siguiente", JOptionPane.INFORMATION_MESSAGE);
             }
         } else {
             JOptionPane.showMessageDialog(this,
-                    "No se puede colocar la nave aquí (fuera de límites, superposición, o mala posición).",
+                    "No se puede colocar la nave aquí (fuera de límites o superposición).",
                     "Error de Acomodo",
                     JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    // Helper para obtener la siguiente nave pendiente de colocar (Ya no es necesario, ControlJuego lo verificará)
-    // private Nave getSiguienteNaveNoColocada(List<Nave> naves) { ... } // ELIMINADO
     private void actualizarVistaTablero(Tablero tablero) {
-        // Método para reflejar los cambios en el modelo (las naves colocadas) en el UI
+        if (tablero == null) {
+            return;
+        }
         for (Casilla casilla : tablero.getMatrizDeCasillas()) {
             JButton btn = botonesCasillas.get(casilla.getCoordenada());
             if (btn != null) {
                 if (casilla.isOcupada()) {
-                    btn.setBackground(java.awt.Color.GRAY); // Representación visual de la nave
-                    btn.setText("");
+                    btn.setBackground(java.awt.Color.GRAY);
                 } else {
-                    btn.setBackground(java.awt.Color.CYAN); // Agua
-                    btn.setText(casilla.getCoordenada());
+                    btn.setBackground(java.awt.Color.CYAN);
                 }
                 btn.setOpaque(true);
-                btn.setBorderPainted(false);
             }
         }
         panelTablero.revalidate();
@@ -244,31 +258,40 @@ public class Acomodo extends javax.swing.JFrame {
     }
 
     private String convertirCoordenada(int fila, int col) {
-                char letra = (char) ('A' + fila);
-                return letra + String.valueOf(col + 1);
-    
+        char letra = (char) ('A' + fila);
+        return letra + String.valueOf(col + 1);
+    }
 
-        }
-
-    // Manejo del evento "Listo"
     private void btnListoActionPerformed(java.awt.event.ActionEvent evt) {
+        if (jugador == null) {
+            return;
+        }
 
-        // La validación final se hace en ControlJuego
         boolean acomodoCompleto = controlJuego.verificarAcomodoCompleto(jugador);
 
         if (acomodoCompleto) {
-            // Se llama al ControlVista para que inicie el proceso de sincronización P2P
-            // La vista se encarga de cerrarse a sí misma.
-            controlVista.notificarAcomodoListo(jugador); // Se debe pasar el Jugador al controlador
+            controlVista.notificarAcomodoListo(jugador);
             this.dispose();
         } else {
-            // Este caso ya debería ser manejado por la lógica de habilitar/deshabilitar el botón
             JOptionPane.showMessageDialog(this,
                     "Debes colocar todas tus naves antes de continuar.",
                     "Acomodo Incompleto",
                     JOptionPane.WARNING_MESSAGE);
         }
     }
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    // </editor-fold>
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -293,41 +316,6 @@ public class Acomodo extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Acomodo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Acomodo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Acomodo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(Acomodo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Acomodo().setVisible(true);
-            }
-        });
-    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables

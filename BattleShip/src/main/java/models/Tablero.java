@@ -7,24 +7,23 @@ import java.util.List;
  *
  * @author Usuario
  */
-public class Tablero{
+public class Tablero {
+
     private int medidas;
     private List<Casilla> matrizDeCasillas;
     private Jugador jugador;
     private List<Nave> naves;
     private List<Disparo> disparos;
 
-    //Logica del Patron observador parte 1
     private final List<TableroObservador> observadores = new ArrayList<>();
-    public Tablero() {
-    }
 
-    public Tablero(int medidas, List<Casilla> matrizDeCasillas, Jugador jugador, List<Nave> naves, List<Disparo> disparos) {
+    public Tablero(int medidas, Jugador jugador) {
         this.medidas = medidas;
-        this.matrizDeCasillas = matrizDeCasillas;
         this.jugador = jugador;
-        this.naves = naves;
-        this.disparos = disparos;
+        this.matrizDeCasillas = new ArrayList<>();
+        this.naves = new ArrayList<>();
+        this.disparos = new ArrayList<>();
+        inicializarCasillas();
     }
 
     public int getMedidas() {
@@ -39,8 +38,8 @@ public class Tablero{
         return matrizDeCasillas;
     }
 
-    public void setMatrizDeCasillas(List<Casilla> matrizDeCasillas) {
-        this.matrizDeCasillas = matrizDeCasillas;
+    public void setMatrizDeCasillas(List<Casilla> lista) {
+        this.matrizDeCasillas = lista;
     }
 
     public Jugador getJugador() {
@@ -66,47 +65,96 @@ public class Tablero{
     public void setDisparos(List<Disparo> disparos) {
         this.disparos = disparos;
     }
-    
-    public void colocarNavesEnCasillas() {
-        if (naves == null || naves.isEmpty()) {
-            return;
-        }
 
-        for (Nave nave : naves) {
-            for (String coordenada : nave.getCoordenadas()) {
-                for (Casilla casilla : matrizDeCasillas) {
-                    if (casilla.getCoordenada().equals(coordenada)) {
-                        casilla.setOcupada(true);
-                        break;
-                    }
-                }
+    public void inicializarCasillas() {
+        matrizDeCasillas.clear();
+        for (int fila = 0; fila < medidas; fila++) {
+            for (int col = 0; col < medidas; col++) {
+                String coordenada = "" + (char) ('A' + fila) + (col + 1);
+                matrizDeCasillas.add(new Casilla(coordenada, false, false));
             }
         }
     }
-    
-    //Logica del patron observador parte2
-    public void addObservador(TableroObservador observador){
-        observadores.add(observador);
-    }
-    
-    public void removeObservador(TableroObservador observador){
-        observadores.remove(observador);
-    }
-    
-    public void notificarObservadores(String mensaje){
-        for (TableroObservador observador : observadores) {
-            observador.actualizarTablero(this, mensaje);
+    public boolean agregarNave(Nave nave) {
+        if (nave == null || nave.getCoordenadas() == null) {
+            return false;
         }
-    }
-    
-    public void inicializarCasillas() {
-    matrizDeCasillas = new ArrayList<>();
-    for (int fila = 0; fila < medidas; fila++) {
-        for (int col = 0; col < medidas; col++) {
-            String coordenada = "" + (char)('A' + fila) + (col + 1);
-            matrizDeCasillas.add(new Casilla(coordenada, false, false));
+        List<String> coordsNorm = new ArrayList<>();
+        for (String c : nave.getCoordenadas()) {
+            coordsNorm.add(c.trim().toUpperCase());
         }
-    }
-}
+        // choca con otras naves
+        for (Nave n : naves) {
+            if (n.getCoordenadas() == null) {
+                continue;
+            }
+            for (String c : n.getCoordenadas()) {
+                if (coordsNorm.contains(c.trim().toUpperCase())) {
+                    return false;
+                }
+            }
+        }
 
+        // agrega y marca casillas
+        naves.add(nave);
+        nave.setColocada(true);
+        for (String coord : coordsNorm) {
+            Casilla cas = buscarCasilla(coord);
+            if (cas != null) {
+                cas.setOcupada(true);
+            }
+        }
+        return true;
+    }
+
+    public void colocarNavesEnCasillas() {
+        // limpiar primero
+        for (Casilla c : matrizDeCasillas) {
+            c.setOcupada(false);
+        }
+
+        if (naves == null) {
+            return;
+        }
+        for (Nave n : naves) {
+            if (n.getCoordenadas() == null) {
+                continue;
+            }
+            for (String coord : n.getCoordenadas()) {
+                Casilla c = buscarCasilla(coord);
+                if (c != null) {
+                    c.setOcupada(true);
+                }
+            }
+        }
+        notificarObservadores("Naves colocadas");
+    }
+
+    private Casilla buscarCasilla(String coord) {
+        if (coord == null) {
+            return null;
+        }
+        String cNorm = coord.trim().toUpperCase();
+        for (Casilla c : matrizDeCasillas) {
+            if (c.getCoordenada().equalsIgnoreCase(cNorm)) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    // metodos observadores para tablero.
+    public void addObservador(TableroObservador obs) {
+        observadores.add(obs);
+    }
+
+    public void removeObservador(TableroObservador obs) {
+        observadores.remove(obs);
+    }
+
+    public void notificarObservadores(String mensaje) {
+        for (TableroObservador obs : observadores) {
+            obs.actualizarTablero(this, mensaje);
+        }
+    }
 }

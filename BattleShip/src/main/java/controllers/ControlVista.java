@@ -1,6 +1,9 @@
 package controllers;
 
+import com.mycompany.p2p.ConnectionListener;
+import com.mycompany.p2p.MessageListener;
 import infraestructura.P2PManager;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,272 +13,360 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import models.Casilla;
-import models.Tablero;
-import com.mycompany.p2p.ConnectionListener;
-import com.mycompany.p2p.MessageListener;
 import models.Jugador;
+import models.Tablero;
+import models.enums.ResultadoDisparo;
 import views.Acomodo;
-import views.Menu;
 import views.PanelJuego;
 
 /**
  *
- * @author Usuario
+ * @author Acer
  */
 public class ControlVista {
 
     private final ControlJuego controlJuego;
-    private final Map<String, JButton> botones;
+    // Mapas separados para controlar los botones de cada tablero independientemente
+    private final Map<String, JButton> botonesOponente = new HashMap<String, JButton>();
+    private final Map<String, JButton> botonesPropios = new HashMap<String, JButton>();
 
-    private Menu menuView;
     private final P2PManager p2p;
+
+    private ImageIcon iconAgua;
+    private ImageIcon iconFallo;
+    private ImageIcon iconAcierto;
+
+    private boolean serverStarted = false;
+    private Acomodo acomodoView;
+    private Jugador jugadorLocal;
+
+    private boolean yoListo = false;
+    private boolean rivalListo = false;
 
     public ControlVista(ControlJuego controlJuego) {
         this.controlJuego = controlJuego;
-        this.botones = new HashMap<>();
+        this.controlJuego.setControlVista(this);
         this.p2p = new P2PManager();
-        System.out.println("DEBUG: ControlVista instanciado");
+
+        cargarIconos();
+        instalarListenersP2PGenericos();
     }
 
-    public void setMenuView(Menu menuView) {
-        this.menuView = menuView;
-    }
-    
-    private void onConnectedToServer() {
-        SwingUtilities.invokeLater(() -> abrirVistaAcomodo());
-    }
-    // flag para evitar reiniciar el servidor varias veces
-    private boolean serverStarted = false;
-
-// helper que muestra el ID (ya lo tenías, pero asegúrate de que esté presente)
-    private void mostrarServerId(String serverId) {
-        if (menuView != null) {
-            JOptionPane.showMessageDialog(menuView,
-                    "ID de partida:\n" + serverId,
-                    "Servidor iniciado",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+    private void cargarIconos() {
+        try {
+            if (ControlVista.class.getResource("/imagenes/CasillaAgua.png") != null) {
+                iconAgua = new ImageIcon(ControlVista.class.getResource("/imagenes/CasillaAgua.png"));
+                iconAcierto = new ImageIcon(ControlVista.class.getResource("/imagenes/DisparoAcertado.png"));
+                iconFallo = new ImageIcon(ControlVista.class.getResource("/imagenes/DisparoFallido.png"));
+            }
+        } catch (Exception e) {
+            System.err.println("Error cargando iconos: " + e.getMessage());
         }
     }
 
-// helper que abre la pantalla de acomodo (ya lo tienes como abrirPantallaAcomodo())
-// Si usas otro nombre, asegúrate que exista:
-    private void onClientConnectedDoOpen() {
-        SwingUtilities.invokeLater(() -> abrirVistaAcomodo());
-    }
-    /**
-     * Inicia servidor (jugador 1). Instala listeners antes de arrancar el
-     * servidor.
-     */
-    public void crearPartida() {
-
-        System.out.println("DEBUG: crearPartida() called. serverStartedFlag=" + serverStarted);
-        
-        if (serverStarted) {
-            JOptionPane.showMessageDialog(menuView,
-                    "El servidor ya está iniciado.",
-                    "Aviso",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
+    private void instalarListenersP2PGenericos() {
         p2p.setConnectionListener(new ConnectionListener() {
-
+            @Override
             public void onServerStarted(String serverId) {
-                System.out.println("SERVER_STARTED: " + serverId);
-                mostrarServerId(serverId); // <-- AHORA YA NO ES RECURSIVO
+                System.out.println("[P2P] server started: " + serverId);
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "ID servidor:\n" + serverId + "\n\nEsperando al Jugador 2..."));
             }
 
             @Override
             public void onClientConnected() {
-                System.out.println("CLIENT_CONNECTED");
-                // Ahora el servidor también va a la pantalla Acomodo
-                abrirVistaAcomodo();
+                System.out.println("[P2P] client connected");
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "¡Jugador 2 conectado! Iniciando acomodo..."));
+
+                // HOST: Abre su ventana de acomodo en cuanto llega el cliente
+                abrirAcomodo();
             }
 
             @Override
             public void onConnectedToServer() {
+                System.out.println("[P2P] connected to server");
+                // CLIENTE: NO ABRE ACOMODO AÚN. Espera a que el Host termine (Flujo secuencial).
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Conectado al Host.\nEsperando a que el anfitrión termine de acomodar sus naves..."));
             }
 
             @Override
             public void onPeerDisconnected() {
-                System.out.println("PEER_DISCONNECTED");
+                System.out.println("[P2P] peer disconnected");
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "El otro jugador se desconectó."));
             }
 
             @Override
             public void onError(String errorMessage) {
-                System.err.println("ERROR: " + errorMessage);
-                JOptionPane.showMessageDialog(menuView,
-                        "Error en servidor:\n" + errorMessage,
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                System.err.println("[P2P] error: " + errorMessage);
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Error P2P: " + errorMessage));
             }
         });
 
         p2p.setMessageListener(new MessageListener() {
             @Override
             public void onMessageReceived(String msg) {
-                System.out.println("MENSAJE SERVER: " + msg);
+                System.out.println("[P2P] recibido: " + msg);
+                controlJuego.procesarMensajeEntrante(msg);
             }
         });
+    }
+
+    private void abrirAcomodo() {
+        java.awt.EventQueue.invokeLater(() -> {
+            if (acomodoView == null || !acomodoView.isVisible()) {
+                Acomodo acomodo = new Acomodo(jugadorLocal, controlJuego, ControlVista.this);
+                acomodo.setVisible(true);
+                this.acomodoView = acomodo;
+            }
+        });
+    }
+
+    // HOST
+    public void crearPartida() {
+        if (serverStarted) {
+            JOptionPane.showMessageDialog(null, "Servidor ya iniciado");
+            return;
+        }
+        this.jugadorLocal = controlJuego.getJugador();
+        jugadorLocal.setNombre("Jugador 1 (Host)");
 
         p2p.startAsServer();
         serverStarted = true;
     }
+
+    // CLIENTE
     public void unirseAPartida(String serverId) {
-
-        p2p.setConnectionListener(new ConnectionListener() {
-
-            @Override
-            public void onServerStarted(String serverId) {
-                // NO APLICA EN CLIENTE
-            }
-
-            @Override
-            public void onClientConnected() {
-                // NO SE USA EN CLIENTE (solo servidor)
-            }
-
-            @Override
-            public void onConnectedToServer() {
-                System.out.println("CONECTADO AL SERVIDOR");
-
-                // Ahora el cliente usa el método unificado (antes estaba implícito aquí)
-                abrirVistaAcomodo();
-            }
-
-            @Override
-            public void onPeerDisconnected() {
-                System.out.println("PEER_DISCONNECTED");
-            }
-
-            @Override
-            public void onError(String errorMessage) {
-                System.out.println("ERROR: " + errorMessage);
-                JOptionPane.showMessageDialog(menuView,
-                        "Error al conectar:\n" + errorMessage,
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        p2p.setMessageListener(message -> {
-            System.out.println("MENSAJE CLIENTE: " + message);
-        });
+        this.jugadorLocal = controlJuego.getJugador();
+        jugadorLocal.setNombre("Jugador 2 (Cliente)");
 
         try {
             p2p.connectToServer(serverId);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(menuView,
-                    "Error al conectar. Verifica el ID.",
-                    "Error de conexión",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Error al conectar: " + ex.getMessage());
         }
     }
-    
-    private void abrirVistaAcomodo() {
+
+    public void enviarMensaje(String msg) throws Exception {
+        p2p.sendMessage(msg);
+    }
+
+    // --- LÓGICA DE FLUJO SECUENCIAL ---
+    public void notificarRivalListo() {
+        this.rivalListo = true;
+        System.out.println("DEBUG: Rival Listo recibido. YoListo=" + yoListo);
+
         SwingUtilities.invokeLater(() -> {
-            if (menuView != null) {
-                menuView.setVisible(false);
+            if (!yoListo) {
+                // CASO CLIENTE: El Host ya terminó, ahora es MI turno.
+                mostrarMensaje("¡El anfitrión ha terminado! Ahora es tu turno de acomodar las naves.");
+                abrirAcomodo();
+            } else {
+                // CASO HOST: Yo ya estaba listo esperando, y el Cliente acaba de terminar.
+                verificarInicioJuego();
             }
-
-            // Esta es la pantalla donde arrastran y sueltan las naves
-            Acomodo acomodo = new Acomodo(controlJuego, this); // *Ajustar constructor de Acomodo si es necesario*
-
-            acomodo.setLocationRelativeTo(null);
-            acomodo.setVisible(true);
         });
     }
 
-// **RENOMBRADO** (Este método debe ser llamado DESPUÉS de que ambos confirmen acomodo)
-    private void abrirBatallaPrincipal() {
+    public void notificarAcomodoListo(Jugador jugador) {
+        try {
+            this.yoListo = true;
+            enviarMensaje("ACOMODO_LISTO");
 
-        // Obtener jugador desde ControlJuego
-        Jugador jugador = controlJuego.getJugador();
+            // Cerrar mi pantalla de acomodo
+            if (acomodoView != null) {
+                acomodoView.dispose();
+            }
 
-        // Crear pantalla de juego (La vista principal de batalla)
-        // Asegúrate de que esta llamada cumpla con el nuevo constructor de 3 parámetros
-        PanelJuego panelJuego = new PanelJuego(jugador, controlJuego, this);
-
-        panelJuego.setLocationRelativeTo(null);
-        panelJuego.setVisible(true);
-
-        if (menuView != null) {
-            menuView.dispose();
+            if (!rivalListo) {
+                // CASO HOST: Terminé primero. Esperar al cliente.
+                mostrarMensaje("Has terminado. Esperando a que el oponente acomode sus naves...");
+            } else {
+                // CASO CLIENTE: El Host ya estaba listo, iniciamos.
+                verificarInicioJuego();
+            }
+        } catch (Exception e) {
+            mostrarMensaje("Error al notificar listo: " + e.getMessage());
         }
     }
- 
-    public void generarTablero(Tablero tablero, JPanel panelTablero) {
+
+    private void verificarInicioJuego() {
+        if (yoListo && rivalListo) {
+            System.out.println("DEBUG: Ambos listos. Iniciando PanelJuego...");
+            SwingUtilities.invokeLater(() -> {
+                if (acomodoView != null) {
+                    acomodoView.dispose();
+                }
+
+                // Abrir pantalla de juego con ambos tableros
+                PanelJuego panelJuego = new PanelJuego(jugadorLocal, controlJuego, this);
+                panelJuego.setVisible(true);
+            });
+        }
+    }
+
+    public void mostrarMensaje(String mensaje) {
+        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, mensaje));
+    }
+
+    public void actualizarTableros() {
+        // Este método es genérico, pero PanelJuego llamará a los específicos de abajo
+    }
+
+    // --- GENERACIÓN DE TABLEROS (CORREGIDO: VISIBILIDAD Y DIMENSIONES) ---
+    // 1. TABLERO PROPIO (IZQUIERDA): VISIBLE
+    public void generarTableroPropio(Tablero tablero, JPanel panel, int buttonSize) {
+        panel.removeAll();
+        botonesPropios.clear();
         int n = tablero.getMedidas();
-        int buttonSize = 60;
-        panelTablero.removeAll();
-        botones.clear();
-
-        ImageIcon iconAgua = new ImageIcon(getClass().getResource("/imagenes/CasillaAgua.png"));
-        ImageIcon iconAcierto = new ImageIcon(getClass().getResource("/imagenes/DisparoAcertado.png"));
-        //ImageIcon iconHundido = new ImageIcon(getClass().getResource("/imagenes/NaveHundida.png"));
-        ImageIcon iconFallo = new ImageIcon(getClass().getResource("/imagenes/DisparoFallido.png"));
-
-        tablero.colocarNavesEnCasillas();
 
         for (int fila = 0; fila < n; fila++) {
             for (int col = 0; col < n; col++) {
-                String coordenada = convertirCoordenada(fila, col);
+                String coord = convertirCoordenada(fila, col);
                 Casilla casilla = tablero.getMatrizDeCasillas().get(fila * n + col);
 
                 JButton btn = new JButton();
-                btn.setBounds(col * buttonSize, fila * buttonSize, buttonSize, buttonSize);
-                btn.setActionCommand(coordenada);
+                btn.setPreferredSize(new Dimension(buttonSize, buttonSize)); // Forzar tamaño
 
-                btn.setIcon(casilla.isDañada() ? (casilla.isOcupada() ? iconAcierto : iconFallo) : iconAgua);
-                btn.setEnabled(!casilla.isDañada());
-                btn.addActionListener(e -> {
-                    if (!casilla.isDañada()) {
-                        // Actualiza el modelo y obtiene resultado
-                        controlJuego.realizarDisparo(tablero, coordenada);
+                // CORRECCIÓN VISUAL: Forzar opacidad para que el color de fondo se vea
+                btn.setOpaque(true);
+                btn.setBorderPainted(true);
+
+                // LÓGICA VISUAL PROPIA: Se muestran las naves (Color.GRAY)
+                if (casilla.isOcupada()) {
+                    btn.setBackground(Color.GRAY);
+                    if (casilla.isDañada()) {
+                        btn.setIcon(iconAcierto);
                     }
-                });
+                } else {
+                    btn.setBackground(new Color(173, 216, 230)); // Azul claro
+                    if (casilla.isDañada()) {
+                        btn.setIcon(iconFallo);
+                    } else {
+                        btn.setIcon(iconAgua);
+                    }
+                }
 
-                panelTablero.add(btn);
-                botones.put(coordenada, btn);
+                btn.setEnabled(false); // No interactivo
+                panel.add(btn);
+                botonesPropios.put(coord, btn);
             }
         }
-        panelTablero.setPreferredSize(new Dimension(n * buttonSize, n * buttonSize));
-        panelTablero.revalidate();
-        panelTablero.repaint();
+        panel.revalidate();
+        panel.repaint();
+    }
 
-//        panelTablero.setPreferredSize(new java.awt.Dimension(n * buttonSize, n * buttonSize));
-//        panelTablero.revalidate();
-//        panelTablero.repaint();
+    // 2. TABLERO OPONENTE (DERECHA): NIEBLA DE GUERRA
+    public void generarTableroOponente(Tablero tablero, JPanel panel, int buttonSize) {
+        panel.removeAll();
+        botonesOponente.clear();
+        int n = tablero.getMedidas();
+
+        for (int fila = 0; fila < n; fila++) {
+            for (int col = 0; col < n; col++) {
+                String coord = convertirCoordenada(fila, col);
+                Casilla casilla = tablero.getMatrizDeCasillas().get(fila * n + col);
+                JButton btn = new JButton();
+                btn.setPreferredSize(new Dimension(buttonSize, buttonSize)); // Forzar tamaño
+                btn.setActionCommand(coord);
+
+                // CORRECCIÓN VISUAL
+                btn.setOpaque(true);
+                btn.setBorderPainted(true);
+
+                // LÓGICA VISUAL RIVAL: Naves ocultas hasta que son impactadas
+                if (casilla.isDañada()) {
+                    if (casilla.isOcupada()) {
+                        btn.setIcon(iconAcierto); // Hit
+                        btn.setBackground(Color.RED); // Opcional: fondo rojo para impacto
+                    } else {
+                        btn.setIcon(iconFallo); // Miss
+                        btn.setBackground(Color.BLUE); // Opcional: fondo azul oscuro para fallo
+                    }
+                    btn.setEnabled(false);
+                } else {
+                    btn.setIcon(iconAgua); // Se ve como agua aunque haya nave
+                    btn.setBackground(new Color(173, 216, 230));
+                    btn.setEnabled(true);
+                }
+
+                btn.addActionListener(e -> {
+                    boolean ok = controlJuego.dispararAOponente(coord);
+                    if (!ok) {
+                        // Feedback opcional
+                    } else {
+                        btn.setEnabled(false);
+                    }
+                });
+                panel.add(btn);
+                botonesOponente.put(coord, btn);
+            }
+        }
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    // Actualiza botones PROPIOS (cuando me disparan)
+    public void actualizarTableroPropio(Tablero tablero) {
+        for (Casilla casilla : tablero.getMatrizDeCasillas()) {
+            JButton btn = botonesPropios.get(casilla.getCoordenada());
+            if (btn != null) {
+                if (casilla.isOcupada()) {
+                    btn.setBackground(Color.GRAY);
+                    if (casilla.isDañada()) {
+                        btn.setIcon(iconAcierto);
+                    }
+                } else {
+                    btn.setBackground(new Color(173, 216, 230));
+                    if (casilla.isDañada()) {
+                        btn.setIcon(iconFallo);
+                    } else {
+                        btn.setIcon(iconAgua);
+                    }
+                }
+                btn.setOpaque(true); // Re-afirmar opacidad
+                btn.repaint(); // CORRECCIÓN: Forzar repintado inmediato
+            }
+        }
+    }
+
+    // Actualiza botones RIVALES (cuando yo disparo)
+    public void actualizarTableroOponente(Tablero tablero) {
+        for (Casilla casilla : tablero.getMatrizDeCasillas()) {
+            JButton btn = botonesOponente.get(casilla.getCoordenada());
+            if (btn != null) {
+                if (casilla.isDañada()) {
+                    if (casilla.isOcupada()) {
+                        btn.setIcon(iconAcierto);
+                        btn.setBackground(Color.RED);
+                    } else {
+                        btn.setIcon(iconFallo);
+                        btn.setBackground(Color.BLUE);
+                    }
+                    btn.setEnabled(false);
+                }
+                btn.setOpaque(true); // Re-afirmar opacidad
+                btn.repaint(); // CORRECCIÓN: Forzar repintado inmediato
+            }
+        }
+    }
+
+    // Método legacy para Acomodo (mantener)
+    public void generarTablero(Tablero tablero, JPanel panel) {
+        panel.removeAll();
+        int n = tablero.getMedidas();
+        for (int fila = 0; fila < n; fila++) {
+            for (int col = 0; col < n; col++) {
+                String coord = convertirCoordenada(fila, col);
+                JButton btn = new JButton();
+                // Lógica simple para acomodo (reutiliza visualización si se desea)
+                panel.add(btn);
+            }
+        }
     }
 
     public void actualizarBotones(Tablero tablero) {
-        ImageIcon iconAgua = new ImageIcon(getClass().getResource("/imagenes/CasillaAgua.png"));
-        ImageIcon iconAcierto = new ImageIcon(getClass().getResource("/imagenes/DisparoAcertado.png"));
-        ImageIcon iconFallo = new ImageIcon(getClass().getResource("/imagenes/DisparoFallido.png"));
-
-        for (Casilla casilla : tablero.getMatrizDeCasillas()) {
-            JButton btn = botones.get(casilla.getCoordenada());
-            if (btn != null) {
-                btn.setIcon(casilla.isDañada() ? (casilla.isOcupada() ? iconAcierto : iconFallo) : iconAgua);
-                btn.setEnabled(!casilla.isDañada());
-                
-                btn.setContentAreaFilled(false);
-                btn.setBorderPainted(false);
-                btn.setOpaque(false);
-            }
-        }
     }
 
-    public Map<String, JButton> getBotones() {
-        return botones;
-    }
-
-    //Pasa las coordenadas de numeros a letra y numero
     private String convertirCoordenada(int fila, int col) {
-        char letra = (char) ('A' + fila);
-        return letra + String.valueOf(col + 1);
+        return "" + (char) ('A' + fila) + (col + 1);
     }
-
 }

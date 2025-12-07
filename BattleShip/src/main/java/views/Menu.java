@@ -6,10 +6,16 @@ package views;
 
 import controllers.ControlJuego;
 import controllers.ControlVista;
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.GridLayout;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 /**
  *
@@ -17,61 +23,90 @@ import javax.swing.JOptionPane;
  */
 public class Menu extends javax.swing.JFrame {
 
-    
+    private final ControlVista controlVista;
+
+    // Componentes
     private JButton btnCrearPartida;
     private JButton btnUnirsePartida;
     private JButton btnSalir;
-    private final ControlVista controlVista;
-    
+    private JLabel lblTitulo;
+    private JPanel panelPrincipal;
+
     public Menu(ControlVista controlVista) {
         this.controlVista = controlVista;
 
-        setTitle("Battleship - Menú Principal");
-        setSize(400, 300);
-        setLocationRelativeTo(null);
+        // Configuración de la ventana
+        setTitle("Batalla Naval - Menú Principal");
+        setSize(400, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new GridLayout(3, 1, 10, 10));
+        setLocationRelativeTo(null); // Centrar en pantalla
 
-        btnCrearPartida = new JButton("Crear Partida");
-        btnUnirsePartida = new JButton("Unirse a Partida");
-        btnSalir = new JButton("Salir");
-
-        add(btnCrearPartida);
-        add(btnUnirsePartida);
-        add(btnSalir);
-
-        initListeners();
+        inicializarComponentes();
     }
 
-      private void initListeners() {
-        btnCrearPartida.addActionListener(e -> controlVista.crearPartida());
+    private void inicializarComponentes() {
+        // Panel principal con borde y color
+        panelPrincipal = new JPanel();
+        panelPrincipal.setLayout(new GridLayout(4, 1, 10, 10)); // 4 filas, 1 columna, espacio de 10px
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Margen
+        panelPrincipal.setBackground(new Color(50, 50, 50)); // Gris oscuro
 
-        btnUnirsePartida.addActionListener(e -> {
-            String serverId = JOptionPane.showInputDialog(
-                    this,
-                    "Introduce el ID del servidor",
-                    "Conectar a partida",
-                    JOptionPane.PLAIN_MESSAGE
-            );
+        // Título
+        lblTitulo = new JLabel("BATTLESSHIP P2P");
+        lblTitulo.setFont(new Font("Arial", Font.BOLD, 24));
+        lblTitulo.setForeground(Color.WHITE);
+        lblTitulo.setHorizontalAlignment(SwingConstants.CENTER);
 
-            if (serverId != null && !serverId.trim().isEmpty()) {
-                 System.out.println("Intentando conectarme al servidor con ID: " + serverId);
-                controlVista.unirseAPartida(serverId);
-                
-            }
-        });
+        // Botones
+        btnCrearPartida = crearBotonEstilizado("Crear Partida (Host)");
+        btnUnirsePartida = crearBotonEstilizado("Unirse a Partida (Cliente)");
+        btnSalir = crearBotonEstilizado("Salir");
 
+        // Listeners (Acciones)
+        btnCrearPartida.addActionListener(e -> accionCrearPartida());
+        btnUnirsePartida.addActionListener(e -> accionUnirsePartida());
         btnSalir.addActionListener(e -> System.exit(0));
-    }
-      private void abrirPantallaAcomodo() {
-        System.out.println(">>> Abriendo pantalla de acomodo...");
 
-        Acomodo view = new Acomodo();
-        view.setVisible(true);
+        // Agregar al panel
+        panelPrincipal.add(lblTitulo);
+        panelPrincipal.add(btnCrearPartida);
+        panelPrincipal.add(btnUnirsePartida);
+        panelPrincipal.add(btnSalir);
 
-        // Cierra la pantalla actual
-        this.dispose();
+        // Agregar panel a la ventana
+        this.add(panelPrincipal);
     }
+
+    private JButton crearBotonEstilizado(String texto) {
+        JButton btn = new JButton(texto);
+        btn.setFont(new Font("Arial", Font.PLAIN, 16));
+        btn.setFocusPainted(false);
+        return btn;
+    }
+
+    private void accionCrearPartida() {
+        // Lógica para crear partida
+        if (controlVista != null) {
+            controlVista.crearPartida();
+            this.dispose(); // Cerrar menú
+        }
+    }
+
+    private void accionUnirsePartida() {
+        // Lógica para unirse
+        String serverId = JOptionPane.showInputDialog(this,
+                "Introduce el ID del servidor:",
+                "Conectar",
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (serverId != null && !serverId.trim().isEmpty()) {
+            if (controlVista != null) {
+                controlVista.unirseAPartida(serverId.trim());
+                this.dispose(); // Cerrar menú
+            }
+        }
+    }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -100,7 +135,7 @@ public class Menu extends javax.swing.JFrame {
     /**
      * @param args the command line arguments
      */
-        public static void main(String args[]) {
+    public static void main(String args[]) {
 
         java.awt.EventQueue.invokeLater(() -> {
 
@@ -113,8 +148,8 @@ public class Menu extends javax.swing.JFrame {
 
             // 3. Crear y mostrar el menú
             Menu menu = new Menu(controlVista);
-            controlVista.setMenuView(menu);
 
+            // linea removida: controlVista.setMenuView(menu);
             menu.setVisible(true);
         });
     }

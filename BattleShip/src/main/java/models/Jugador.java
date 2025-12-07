@@ -4,6 +4,7 @@
  */
 package models;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -11,21 +12,25 @@ import java.util.List;
  * @author Usuario
  */
 public class Jugador {
+
     private String nombre;
     private String color;
     private boolean turno;
-    Marcador marcador;
-    List<Tablero> tableros; 
+
+    private Marcador marcador;
+
+    private Tablero tablero;
 
     public Jugador() {
+        this.marcador = new Marcador();
     }
 
-    public Jugador(String nombre, String color, boolean turno, Marcador marcador, List<Tablero> tableros) {
+    public Jugador(String nombre, String color, boolean turno, Marcador marcador, Tablero tablero) {
         this.nombre = nombre;
         this.color = color;
         this.turno = turno;
-        this.marcador = marcador;
-        this.tableros = tableros;
+        this.marcador = marcador != null ? marcador : new Marcador();
+        this.tablero = tablero;
     }
 
     public String getNombre() {
@@ -60,13 +65,35 @@ public class Jugador {
         this.marcador = marcador;
     }
 
-    public List<Tablero> getTableros() {
-        return tableros;
+
+    public Tablero getTablero() {
+        return tablero;
     }
 
-    public void setTableros(List<Tablero> tableros) {
-        this.tableros = tableros;
+    public void setTablero(Tablero tablero) {
+        this.tablero = tablero;
+    }
+
+    public List<Nave> getNaves() {
+        if (tablero == null) {
+            return new ArrayList<>();
+        }
+        return tablero.getNaves();
+    }
+    public String getId() {
+        return nombre != null ? nombre : "JugadorSinNombre";
     }
     
-    
+    public boolean isAcomodoCompleto() {
+        if (tablero == null || tablero.getNaves() == null) {
+            return false;
+        }
+        // Itera sobre las naves para ver si alguna no ha sido colocada.
+        for (Nave nave : tablero.getNaves()) {
+            if (!nave.isColocada()) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

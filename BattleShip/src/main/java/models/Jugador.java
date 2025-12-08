@@ -6,6 +6,7 @@ package models;
 
 import java.util.ArrayList;
 import java.util.List;
+import models.enums.EstadoNave;
 
 /**
  *
@@ -65,7 +66,6 @@ public class Jugador {
         this.marcador = marcador;
     }
 
-
     public Tablero getTablero() {
         return tablero;
     }
@@ -80,10 +80,11 @@ public class Jugador {
         }
         return tablero.getNaves();
     }
+
     public String getId() {
         return nombre != null ? nombre : "JugadorSinNombre";
     }
-    
+
     public boolean isAcomodoCompleto() {
         if (tablero == null || tablero.getNaves() == null) {
             return false;
@@ -91,6 +92,19 @@ public class Jugador {
         // Itera sobre las naves para ver si alguna no ha sido colocada.
         for (Nave nave : tablero.getNaves()) {
             if (!nave.isColocada()) {
+                return false;
+            }
+        }
+        return true;
+    }
+    //VERIFICA SI TODAS LAS NAVES FUERON UNDIDAS
+    public boolean haPerdido() {
+        List<Nave> misNaves = getNaves();
+        if (misNaves == null || misNaves.isEmpty()) {
+            return false;
+        }
+        for (Nave nave : misNaves) {
+            if (nave.getEstadoNave() != EstadoNave.HUNDIDA) {
                 return false;
             }
         }

@@ -8,8 +8,10 @@ import controllers.ControlJuego;
 import controllers.ControlVista;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.GridLayout;
 import java.util.logging.Logger;
 import javax.swing.ImageIcon;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
@@ -23,188 +25,169 @@ import models.TableroObservador;
  */
 public class PanelJuego extends javax.swing.JFrame implements TableroObservador {
 
-    private static final Logger logger = Logger.getLogger(PanelJuego.class.getName());
-
-    // Variables de lógica
     private Jugador jugador;
     private ControlVista controlVista;
     private ControlJuego controlJuego;
 
-    // Componentes Gráficos
-    private JPanel panelPropio;   // Tablero izquierdo: Mis naves y ataques recibidos
-    private JPanel panelOponente; // Tablero derecho: Mis ataques al rival
-    private JLabel jLabelFondo;
-    private JLabel lblTituloPropio;
-    private JLabel lblTituloOponente;
+    private JPanel panelPropio;
+    private JPanel panelOponente;
 
-    // Constantes para el diseño
-    private static final int TAMANO_CASILLA = 40; // Tamaño de cada botón
-    private static final int MARGEN_TABLERO = 30; // Espacio para coordenadas
-    private static final int ESPACIO_ENTRE_TABLEROS = 50;
-    private static final int INICIO_X_PROPIO = 70;
-    private static final int INICIO_Y_TABLEROS = 120;
-    private static final int ANCHO_TABLERO_PANEL = TAMANO_CASILLA * 10;
-    private static final int ALTO_TABLERO_PANEL = TAMANO_CASILLA * 10;
-    private static final int INICIO_X_OPONENTE = INICIO_X_PROPIO + ANCHO_TABLERO_PANEL + MARGEN_TABLERO + ESPACIO_ENTRE_TABLEROS;
+    private JLabel lblTemporizador;
+    private JLabel lblEstadoTurno;
+
+    private static final int CASILLA_SIZE = 45;
+    private static final int MARGEN_COORD = 30; 
+    private static final int TABLERO_SIZE = CASILLA_SIZE * 10; 
 
     public PanelJuego(Jugador jugador, ControlJuego controlJuego, ControlVista controlVista) {
-        // 1. Configuración de la Ventana
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("Batalla Naval - En Juego (" + (jugador != null ? jugador.getNombre() : "Jugador") + ")");
-        setSize(1200, 750); // Ventana más ancha para dos tableros y más alta para coordenadas
-        setMinimumSize(new java.awt.Dimension(1200, 750));
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setTitle("Batalla Naval - " + (jugador != null ? jugador.getNombre() : ""));
+        setSize(1350, 800);
         setResizable(false);
-        setLayout(null); // Layout absoluto para mantener el diseño personalizado
+        setLayout(null); 
+
+        getContentPane().setBackground(new Color(40, 44, 52));
 
         this.jugador = jugador;
         this.controlJuego = controlJuego;
         this.controlVista = controlVista;
 
-        // 2. Inicialización de Componentes Gráficos
-        // --- Títulos ---
-        lblTituloPropio = new JLabel("MI FLOTA", SwingConstants.CENTER);
-        lblTituloPropio.setFont(new Font("Arial", Font.BOLD, 18));
-        lblTituloPropio.setForeground(Color.WHITE);
-        lblTituloPropio.setBounds(INICIO_X_PROPIO, INICIO_Y_TABLEROS - 40, ANCHO_TABLERO_PANEL + MARGEN_TABLERO, 30);
-        add(lblTituloPropio);
-
-        lblTituloOponente = new JLabel("RADAR ENEMIGO", SwingConstants.CENTER);
-        lblTituloOponente.setFont(new Font("Arial", Font.BOLD, 18));
-        lblTituloOponente.setForeground(Color.WHITE);
-        lblTituloOponente.setBounds(INICIO_X_OPONENTE, INICIO_Y_TABLEROS - 40, ANCHO_TABLERO_PANEL + MARGEN_TABLERO, 30);
-        add(lblTituloOponente);
-
-        // --- Tablero Propio (Izquierda) ---
-        panelPropio = new JPanel();
-        panelPropio.setOpaque(false);
-        // El panel de botones se desplaza por el margen de las coordenadas
-        panelPropio.setBounds(INICIO_X_PROPIO + MARGEN_TABLERO, INICIO_Y_TABLEROS + MARGEN_TABLERO, ANCHO_TABLERO_PANEL, ALTO_TABLERO_PANEL);
-        panelPropio.setLayout(null);
-        add(panelPropio);
-        agregarCoordenadas(INICIO_X_PROPIO, INICIO_Y_TABLEROS);
-
-        // --- Tablero Oponente (Derecha) ---
-        panelOponente = new JPanel();
-        panelOponente.setOpaque(false);
-        // El panel de botones se desplaza por el margen de las coordenadas
-        panelOponente.setBounds(INICIO_X_OPONENTE + MARGEN_TABLERO, INICIO_Y_TABLEROS + MARGEN_TABLERO, ANCHO_TABLERO_PANEL, ALTO_TABLERO_PANEL);
-        panelOponente.setLayout(null);
-        add(panelOponente);
-        agregarCoordenadas(INICIO_X_OPONENTE, INICIO_Y_TABLEROS);
-
-        // --- Fondo ---
-        jLabelFondo = new JLabel();
-        jLabelFondo.setBounds(0, 0, 1200, 750);
-        cargarImagenFondo();
-        add(jLabelFondo); // Agregar fondo al final para que quede atrás de todo
-
-        // 3. Lógica de Inicialización de Tableros
+        inicializarComponentes();
         inicializarTableros();
 
-        setLocationRelativeTo(null); // Centrar ventana
+        setLocationRelativeTo(null);
     }
 
-    private void cargarImagenFondo() {
-        try {
-            // Usamos PanelJuego.class para obtener el recurso de forma segura
-            java.net.URL imgUrl = PanelJuego.class.getResource("/imagenes/PantallaJuego.png");
-            if (imgUrl != null) {
-                jLabelFondo.setIcon(new ImageIcon(imgUrl));
-            }
-        } catch (Exception e) {
-            System.err.println("No se pudo cargar la imagen de fondo: " + e.getMessage());
-            // Fondo de respaldo si falla la imagen
-            getContentPane().setBackground(new Color(0, 102, 153));
+    private void inicializarComponentes() {
+        //TEMPORIZADOR 
+        lblTemporizador = new JLabel("30", SwingConstants.CENTER);
+        lblTemporizador.setFont(new Font("Arial", Font.BOLD, 48));
+        lblTemporizador.setForeground(Color.YELLOW);
+        lblTemporizador.setBounds(580, 20, 140, 60);
+        add(lblTemporizador);
+
+        //INDICADOR DE TURNO
+        lblEstadoTurno = new JLabel("ESPERANDO INICIO...", SwingConstants.CENTER);
+        lblEstadoTurno.setFont(new Font("Arial", Font.BOLD, 24));
+        lblEstadoTurno.setForeground(Color.WHITE);
+        lblEstadoTurno.setBounds(400, 80, 500, 30);
+        add(lblEstadoTurno);
+
+        //TABLEROS CON COORDENADAS
+        int xPropio = 50;
+        int xRival = 800;
+        int yTableros = 150;
+
+        agregarEtiqueta(xPropio, 110, TABLERO_SIZE + MARGEN_COORD, "MI FLOTA");
+        agregarEtiqueta(xRival, 110, TABLERO_SIZE + MARGEN_COORD, "RADAR ENEMIGO");
+        //TABLERO PROPIO
+        agregarCoordenadas(xPropio, yTableros);
+
+        panelPropio = new JPanel(new GridLayout(10, 10));
+        panelPropio.setBounds(xPropio + MARGEN_COORD, yTableros + MARGEN_COORD, TABLERO_SIZE, TABLERO_SIZE);
+        panelPropio.setBackground(Color.BLACK);
+        add(panelPropio);
+        //TABLERO RIVAL
+        agregarCoordenadas(xRival, yTableros);
+
+        panelOponente = new JPanel(new GridLayout(10, 10));
+        panelOponente.setBounds(xRival + MARGEN_COORD, yTableros + MARGEN_COORD, TABLERO_SIZE, TABLERO_SIZE);
+        panelOponente.setBackground(Color.BLACK);
+        add(panelOponente);
+    }
+
+    // AGREGA LAS COORDENADAS EN FORMATO (A-J  1-10)
+    private void agregarCoordenadas(int x, int y) {
+        Font fontCoord = new Font("Arial", Font.BOLD, 14);
+        Color colorCoord = Color.LIGHT_GRAY;
+
+        // COLUMNAS (1-10) PARTE SUPERIOR
+        for (int i = 0; i < 10; i++) {
+            JLabel lbl = new JLabel(String.valueOf(i + 1), SwingConstants.CENTER);
+            lbl.setFont(fontCoord);
+            lbl.setForeground(colorCoord);
+            lbl.setBounds(x + MARGEN_COORD + (i * CASILLA_SIZE), y, CASILLA_SIZE, MARGEN_COORD);
+            add(lbl);
+        }
+
+        // FILAS (A-J) LATERAL IZQUIERDO
+        for (int i = 0; i < 10; i++) {
+            char letra = (char) ('A' + i);
+            JLabel lbl = new JLabel(String.valueOf(letra), SwingConstants.CENTER);
+            lbl.setFont(fontCoord);
+            lbl.setForeground(colorCoord);
+            lbl.setBounds(x, y + MARGEN_COORD + (i * CASILLA_SIZE), MARGEN_COORD, CASILLA_SIZE);
+            add(lbl);
         }
     }
 
-    private void agregarCoordenadas(int inicioX, int inicioY) {
-        Font fontCoordenadas = new Font("Arial", Font.BOLD, 14);
-        Color colorCoordenadas = Color.WHITE;
+    private void agregarEtiqueta(int x, int y, int w, String texto) {
+        JLabel l = new JLabel(texto, SwingConstants.CENTER);
+        l.setFont(new Font("Arial", Font.BOLD, 18));
+        l.setForeground(Color.WHITE);
+        l.setBounds(x, y, w, 30);
+        add(l);
+    }
 
-        // Filas (A-J) en el margen izquierdo
-        for (int i = 0; i < 10; i++) {
-            JLabel lblFila = new JLabel(String.valueOf((char) ('A' + i)), SwingConstants.CENTER);
-            lblFila.setFont(fontCoordenadas);
-            lblFila.setForeground(colorCoordenadas);
-            lblFila.setBounds(inicioX, inicioY + MARGEN_TABLERO + (i * TAMANO_CASILLA), MARGEN_TABLERO, TAMANO_CASILLA);
-            add(lblFila);
+    // NUMERO DEL TEMPORIZADOR
+    public void actualizarTemporizador(int segundos) {
+        lblTemporizador.setText(String.valueOf(segundos));
+        if (segundos <= 5) {
+            lblTemporizador.setForeground(Color.RED);
+        } else {
+            lblTemporizador.setForeground(Color.YELLOW);
         }
+    }
 
-        // Columnas (1-10) en el margen superior
-        for (int i = 0; i < 10; i++) {
-            JLabel lblCol = new JLabel(String.valueOf(i + 1), SwingConstants.CENTER);
-            lblCol.setFont(fontCoordenadas);
-            lblCol.setForeground(colorCoordenadas);
-            lblCol.setBounds(inicioX + MARGEN_TABLERO + (i * TAMANO_CASILLA), inicioY, TAMANO_CASILLA, MARGEN_TABLERO);
-            add(lblCol);
+    // TEXTO DEL TURNO (TU TURNO / RIVAL)
+    public void actualizarEstado(String estado) {
+        lblEstadoTurno.setText(estado);
+        if (estado.contains("TU TURNO")) {
+            lblEstadoTurno.setForeground(Color.GREEN);
+        } else {
+            lblEstadoTurno.setForeground(Color.WHITE);
         }
     }
 
     private void inicializarTableros() {
-        if (jugador == null || controlJuego == null || controlVista == null) {
-            return;
-        }
-
-        // --- Inicializar Tablero Propio ---
-        Tablero tableroPropio = jugador.getTablero();
-        if (tableroPropio != null) {
-            if (tableroPropio.getMatrizDeCasillas().isEmpty()) {
-                tableroPropio.inicializarCasillas();
+        if (jugador != null && controlVista != null) {
+            // Inicializar Tablero Propio
+            Tablero propio = jugador.getTablero();
+            if (propio.getMatrizDeCasillas().isEmpty()) {
+                propio.inicializarCasillas();
             }
-            tableroPropio.addObservador(this);
-            // Llama a un método específico en ControlVista para generar el tablero propio (visualización de naves)
-            // NOTA: Este método debe ser implementado en ControlVista.
-            controlVista.generarTableroPropio(tableroPropio, panelPropio, TAMANO_CASILLA);
-        }
+            propio.addObservador(this);
+            controlVista.generarTableroPropio(propio, panelPropio, 45);
 
-        // --- Inicializar Tablero Oponente ---
-        Tablero tableroOponente = controlJuego.getOponenteTablero();
-        if (tableroOponente != null) {
-            if (tableroOponente.getMatrizDeCasillas().isEmpty()) {
-                tableroOponente.inicializarCasillas();
+            // Inicializar Tablero Rival
+            Tablero rival = controlJuego.getOponenteTablero();
+            if (rival.getMatrizDeCasillas().isEmpty()) {
+                rival.inicializarCasillas();
             }
-            tableroOponente.addObservador(this);
-            // Llama a un método específico en ControlVista para generar el tablero del oponente (para atacar)
-            // NOTA: Este método debe ser implementado en ControlVista.
-            controlVista.generarTableroOponente(tableroOponente, panelOponente, TAMANO_CASILLA);
+            rival.addObservador(this);
+            controlVista.generarTableroOponente(rival, panelOponente, 45);
         }
     }
 
-    // Constructor vacío (si lo necesitas para pruebas de diseño)
+
     public PanelJuego() {
-        this(null, null, null);
+        initComponents();
     }
-
-    public static void main(String args[]) {
-        // Método main para pruebas aisladas.
-        // Requeriría una configuración de dependencias (Jugador, ControlJuego, ControlVista)
-        // adecuada para funcionar con la nueva estructura de dos tableros.
+ public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(() -> {
-            // Ejemplo básico (no funcionará completamente sin la lógica de ControlVista):
-            // ControlJuego cj = new ControlJuego();
-            // ControlVista cv = new ControlVista(cj);
-            // new PanelJuego(cj.getJugador(), cj, cv).setVisible(true);
+            new PanelJuego(null, null, null).setVisible(true);
         });
     }
 
     @Override
     public void actualizarTablero(Tablero tablero, String mensaje) {
-        if (controlVista == null || jugador == null || controlJuego == null) {
-            return;
+        if (controlVista != null) {
+            if (tablero == jugador.getTablero()) {
+                controlVista.actualizarTableroPropio(tablero);
+            } else {
+                controlVista.actualizarTableroOponente(tablero);
+            }
         }
-
-        // Determinar qué tablero ha cambiado y llamar al método de actualización correspondiente en ControlVista.
-        // NOTA: Los métodos actualizarTableroPropio y actualizarTableroOponente deben ser implementados en ControlVista.
-        if (tablero == jugador.getTablero()) {
-            // Se actualizó el tablero propio (ej. recibí un disparo)
-            controlVista.actualizarTableroPropio(tablero);
-        } else if (tablero == controlJuego.getOponenteTablero()) {
-            // Se actualizó el tablero del oponente (ej. realicé un disparo y obtuve resultado)
-            controlVista.actualizarTableroOponente(tablero);
-        }
-
-        System.out.println("Notificación recibida en PanelJuego (" + jugador.getNombre() + "): " + mensaje);
     }
 
     /**

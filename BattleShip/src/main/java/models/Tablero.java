@@ -108,7 +108,6 @@ public class Tablero {
     }
 
     public void colocarNavesEnCasillas() {
-        // limpiar primero
         for (Casilla c : matrizDeCasillas) {
             c.setOcupada(false);
         }

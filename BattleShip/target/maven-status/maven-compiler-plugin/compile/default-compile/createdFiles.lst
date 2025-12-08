@@ -6,6 +6,7 @@ controllers\ControlVista$1.class
 models\enums\EstadoPartida.class
 controllers\ControlJuego.class
 models\Marcador.class
+controllers\ControlJuego$1.class
 models\enums\ResultadoDisparo.class
 controllers\ControlVista.class
 models\Nave.class
@@ -15,7 +16,6 @@ models\Casilla.class
 models\Partida.class
 infraestructura\ConnectionListener.class
 models\Tablero.class
-controllers\IControlVista.class
 models\Jugador.class
 models\Nave$1.class
 infraestructura\MessageListener.class

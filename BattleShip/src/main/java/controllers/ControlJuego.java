@@ -1,9 +1,12 @@
 package controllers;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.Timer;
 import models.Casilla;
 import models.Jugador;
 import models.Disparo;
@@ -14,21 +17,24 @@ import models.enums.ResultadoDisparo;
 import models.enums.TipoNave;
 
 /**
- *
+ * CLASE CONTROLADORA QUE MANEJA LA LOGICA DEL JUEGO
  * @author Usuario
  */
 public class ControlJuego {
 
-    private Jugador jugador;            // este jugador (local)
-    private Tablero oponenteTablero;    // representacion local del tablero rival
-
+    private Jugador jugador;
+    private Tablero oponenteTablero;
     private ControlVista controlVista;
-
+    //Cantidad de naves deacuerdo al tipo
     private final Map<TipoNave, Integer> cuotaMax = new HashMap<TipoNave, Integer>();
+    private boolean esMiTurno = false;
+    private Timer turnoTimer;
+    private int segundosRestantes = 30;
 
     public ControlJuego() {
         inicializarCuotas();
         crearJugadorYTablero();
+        inicializarTemporizador();
     }
 
     public void setControlVista(ControlVista cv) {
@@ -37,6 +43,14 @@ public class ControlJuego {
 
     public Jugador getJugador() {
         return jugador;
+    }
+
+    public Tablero getOponenteTablero() {
+        return oponenteTablero;
+    }
+
+    public boolean esMiTurno() {
+        return esMiTurno;
     }
 
     private void inicializarCuotas() {
@@ -50,25 +64,20 @@ public class ControlJuego {
         Tablero t = new Tablero(10, null);
         t.inicializarCasillas();
 
-        // --- CORRECCIÓN: Inicializar las naves reales, no una lista vacía ---
         List<Nave> navesIniciales = new ArrayList<Nave>();
-
-        // Recorremos las cuotas para crear los objetos Nave
         for (Map.Entry<TipoNave, Integer> entry : cuotaMax.entrySet()) {
             TipoNave tipo = entry.getKey();
             int cantidad = entry.getValue();
-
             for (int i = 0; i < cantidad; i++) {
-                // Creamos la nave. (Asumiendo constructor: Tipo, Coords, Impactos, Estado)
+                // Constructor de Nave( Tipo, Coordenadas (vacias), Impactos, Estado)
                 navesIniciales.add(new Nave(tipo, new ArrayList<String>(), 0, EstadoNave.ACTIVA));
             }
         }
         t.setNaves(navesIniciales);
-        // --------------------------------------------------------------------
-
         t.setDisparos(new ArrayList<Disparo>());
 
         this.jugador = new Jugador("Jugador 1", "Rojo", true, null, t);
+
         t.setJugador(jugador);
 
         this.oponenteTablero = new Tablero(10, null);
@@ -77,27 +86,228 @@ public class ControlJuego {
         oponenteTablero.setDisparos(new ArrayList<Disparo>());
     }
 
+    private void inicializarTemporizador() {
+        turnoTimer = new Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (segundosRestantes > 0) {
+                    segundosRestantes--;
+                    if (controlVista != null) {
+                        controlVista.actualizarTiempo(segundosRestantes);
+                    }
+                } else {
+                    timeoutTurno();
+                }
+            }
+        });
+    }
+
+    public void iniciarTurno() {
+        this.esMiTurno = true;
+        this.segundosRestantes = 30;
+        if (controlVista != null) {
+            controlVista.actualizarEstadoTurno("TU TURNO");
+            controlVista.habilitarTableroOponente(true);
+            controlVista.actualizarTiempo(segundosRestantes);
+        }
+        turnoTimer.restart();
+    }
+
+    public void finalizarTurno() {
+        this.esMiTurno = false;
+        turnoTimer.stop();
+        if (controlVista != null) {
+            controlVista.actualizarEstadoTurno("TURNO DEL RIVAL");
+            controlVista.habilitarTableroOponente(false);
+            controlVista.actualizarTiempo(0);
+        }
+    }
+
+    private void timeoutTurno() {
+        finalizarTurno();
+        if (controlVista != null) {
+            try {
+                controlVista.mostrarMensaje("¡Tiempo agotado! Pierdes el turno.");
+                controlVista.enviarMensaje("TIMEOUT");
+            } catch (Exception ex) {
+                System.err.println("Error enviando timeout: " + ex.getMessage());
+            }
+        }
+    }
+
+    public void iniciarJuegoReal() {
+        if (jugador.getNombre().contains("Host") || jugador.getNombre().contains("Jugador 1")) {
+            iniciarTurno();
+        } else {
+            finalizarTurno();
+        }
+    }
+
+    public boolean dispararAOponente(String coordenada) {
+        if (!esMiTurno) {
+            if (controlVista != null) {
+                controlVista.mostrarMensaje("No es tu turno.");
+            }
+            return false;
+        }
+        if (coordenada == null || controlVista == null) {
+            return false;
+        }
+        coordenada = coordenada.trim().toUpperCase();
+
+        Casilla c = buscarCasillaEnTablero(oponenteTablero, coordenada);
+        if (c != null && c.isDañada()) {
+            return false;
+        }
+
+        if (c != null) {
+            c.setDañada(true);
+        }
+        turnoTimer.stop();
+
+        try {
+            controlVista.enviarMensaje("DISPARO:" + coordenada);
+            return true;
+        } catch (Exception ex) {
+            if (c != null) {
+                c.setDañada(false);
+            }
+            turnoTimer.start();
+            return false;
+        }
+    }
+
+    public void procesarMensajeEntrante(String msg) {
+        if (msg == null) {
+            return;
+        }
+        msg = msg.trim();
+
+        if (msg.startsWith("DISPARO:")) {
+            String coord = msg.substring(8).trim().toUpperCase();
+            procesarDisparoRemoto(coord);
+
+        } else if (msg.startsWith("RESULT:")) {
+            String[] parts = msg.split(":");
+            if (parts.length >= 3) {
+                String coord = parts[1].trim().toUpperCase();
+                ResultadoDisparo resultado = ResultadoDisparo.valueOf(parts[2]);
+                procesarResultadoDisparoLocal(coord, resultado);
+            }
+
+        } else if (msg.equals("TIMEOUT")) {
+            if (controlVista != null) {
+                controlVista.mostrarMensaje("El rival agotó su tiempo. ¡Es tu turno!");
+            }
+            iniciarTurno();
+
+        } else if (msg.startsWith("ACOMODO_LISTO")) {
+            if (controlVista != null) {
+                controlVista.notificarRivalListo();
+            }
+            //VICTORIA
+        } else if (msg.equals("GAME_OVER")) {
+           
+            finalizarTurno(); 
+            if (controlVista != null) {
+                controlVista.terminarPartida(true);
+            }
+        }
+    }
+
+    private void procesarDisparoRemoto(String coord) {
+        Casilla cas = buscarCasillaEnTablero(jugador.getTablero(), coord);
+        if (cas == null) {
+            return;
+        }
+
+        if (cas.isDañada()) {
+            ResultadoDisparo r = cas.isOcupada() ? ResultadoDisparo.IMPACTO : ResultadoDisparo.AGUA;
+            enviarResultado(coord, r);
+            return;
+        }
+
+        cas.setDañada(true);
+        ResultadoDisparo resultado = cas.isOcupada() ? ResultadoDisparo.IMPACTO : ResultadoDisparo.AGUA;
+
+        if (resultado == ResultadoDisparo.IMPACTO) {
+            if (comprobarHundimiento(coord)) {
+                resultado = ResultadoDisparo.HUNDIDO;
+            }
+        }
+
+        jugador.getTablero().getDisparos().add(new Disparo(coord, resultado));
+        jugador.getTablero().notificarObservadores("Disparo en " + coord + ": " + resultado);
+
+        enviarResultado(coord, resultado);
+
+        // ---DERROTA ---
+
+        if (jugador.haPerdido()) {
+            try {
+                
+                controlVista.enviarMensaje("GAME_OVER");
+                controlVista.terminarPartida(false);
+            } catch (Exception ex) {
+                System.err.println("Error enviando Game Over: " + ex.getMessage());
+            }
+            return;
+        }
+
+        if (resultado == ResultadoDisparo.AGUA) {
+            iniciarTurno();
+        } else {
+            if (controlVista != null) {
+                controlVista.actualizarEstadoTurno("RIVAL ACERTO - SIGUE SU TURNO");
+            }
+        }
+    }
+
+    private void procesarResultadoDisparoLocal(String coord, ResultadoDisparo resultado) {
+        Casilla cas = buscarCasillaEnTablero(oponenteTablero, coord);
+        if (cas != null) {
+            cas.setDañada(true);
+            if (resultado == ResultadoDisparo.IMPACTO || resultado == ResultadoDisparo.HUNDIDO) {
+                cas.setOcupada(true);
+            }
+            oponenteTablero.getDisparos().add(new Disparo(coord, resultado));
+            oponenteTablero.notificarObservadores("Resultado: " + resultado);
+        }
+
+        if (resultado == ResultadoDisparo.AGUA) {
+            finalizarTurno();
+        } else {
+            if (controlVista != null) {
+                controlVista.mostrarMensaje("¡Acertaste! Tienes otro tiro.");
+            }
+            segundosRestantes = 30;
+            turnoTimer.restart();
+        }
+    }
+
+    private void enviarResultado(String coord, ResultadoDisparo resultado) {
+        if (controlVista == null) {
+            return;
+        }
+        try {
+            controlVista.enviarMensaje("RESULT:" + coord + ":" + resultado.name());
+        } catch (Exception ex) {
+            System.err.println("Error enviando resultado: " + ex.getMessage());
+        }
+    }
+
     public boolean verificarAcomodoCompleto(Jugador jugador) {
         if (jugador == null || jugador.getTablero() == null) {
             return false;
         }
-
         Map<TipoNave, Integer> conteo = new HashMap<TipoNave, Integer>();
         for (Nave n : jugador.getNaves()) {
             if (n.isColocada()) {
-                if (conteo.containsKey(n.getTipo())) {
-                    conteo.put(n.getTipo(), conteo.get(n.getTipo()) + 1);
-                } else {
-                    conteo.put(n.getTipo(), 1);
-                }
+                conteo.merge(n.getTipo(), 1, Integer::sum);
             }
         }
-
-        for (Map.Entry<TipoNave, Integer> entrada : cuotaMax.entrySet()) {
-            TipoNave tipo = entrada.getKey();
-            int max = entrada.getValue();
-            int actuales = conteo.containsKey(tipo) ? conteo.get(tipo) : 0;
-            if (actuales < max) {
+        for (Map.Entry<TipoNave, Integer> e : cuotaMax.entrySet()) {
+            if (conteo.getOrDefault(e.getKey(), 0) < e.getValue()) {
                 return false;
             }
         }
@@ -134,9 +344,8 @@ public class ControlJuego {
             coords.add("" + (char) ('A' + f) + (c + 1));
         }
 
-        // choque con otras naves
         for (Nave n : tablero.getNaves()) {
-            if (n.getCoordenadas() == null || n == nave) { // Ignorar la misma nave si se está moviendo
+            if (n.getCoordenadas() == null || n == nave) {
                 continue;
             }
             for (String c : n.getCoordenadas()) {
@@ -147,128 +356,20 @@ public class ControlJuego {
         }
 
         nave.setCoordenadas(coords);
-        // Si la nave ya estaba en la lista, no necesitamos agregarla de nuevo, solo actualizar estado
         if (!tablero.getNaves().contains(nave)) {
             tablero.agregarNave(nave);
         }
 
         nave.setColocada(true);
-        tablero.colocarNavesEnCasillas(); // Refrescar matriz
+        tablero.colocarNavesEnCasillas();
         tablero.notificarObservadores("Nave colocada: " + nave.getTipoNave());
-
         return true;
-    }
-
-    public boolean dispararAOponente(String coordenada) {
-        if (coordenada == null || controlVista == null) {
-            return false;
-        }
-        coordenada = coordenada.trim().toUpperCase();
-
-        Casilla c = buscarCasillaEnTablero(oponenteTablero, coordenada);
-        if (c != null && c.isDañada()) {
-            return false;
-        }
-
-        if (c != null) {
-            c.setDañada(true);
-        }
-
-        String msg = "DISPARO:" + coordenada;
-        try {
-            controlVista.enviarMensaje(msg);
-        } catch (Exception ex) {
-            if (c != null) {
-                c.setDañada(false);
-            }
-            return false;
-        }
-        return true;
-    }
-
-    public void procesarMensajeEntrante(String msg) {
-        if (msg == null) {
-            return;
-        }
-        msg = msg.trim();
-        if (msg.startsWith("DISPARO:")) {
-            String coord = msg.substring("DISPARO:".length()).trim().toUpperCase();
-            procesarDisparoRemoto(coord);
-        } else if (msg.startsWith("RESULT:")) {
-            String[] parts = msg.split(":");
-            if (parts.length >= 3) {
-                String coord = parts[1].trim().toUpperCase();
-                String resStr = parts[2].trim().toUpperCase();
-                ResultadoDisparo resultado = ResultadoDisparo.valueOf(resStr);
-                procesarResultadoDisparo(coord, resultado);
-            }
-        } else if (msg.startsWith("ACOMODO_LISTO")) {
-            if (controlVista != null) {
-                controlVista.notificarRivalListo();
-            }
-        }
-    }
-
-    private void procesarDisparoRemoto(String coord) {
-        Casilla cas = buscarCasillaEnTablero(jugador.getTablero(), coord);
-        if (cas == null) {
-            return;
-        }
-        if (cas.isDañada()) {
-            ResultadoDisparo r = cas.isOcupada() ? ResultadoDisparo.IMPACTO : ResultadoDisparo.AGUA;
-            enviarResultado(coord, r);
-            return;
-        }
-
-        cas.setDañada(true);
-
-        ResultadoDisparo resultado = cas.isOcupada() ? ResultadoDisparo.IMPACTO : ResultadoDisparo.AGUA;
-
-        if (resultado == ResultadoDisparo.IMPACTO) {
-            boolean hundido = comprobarHundimiento(coord);
-            if (hundido) {
-                resultado = ResultadoDisparo.HUNDIDO;
-            }
-        }
-
-        jugador.getTablero().getDisparos().add(new Disparo(coord, resultado));
-
-        jugador.getTablero().notificarObservadores("Disparo entrante en " + coord + ": " + resultado);
-        enviarResultado(coord, resultado);
-    }
-
-    private void enviarResultado(String coord, ResultadoDisparo resultado) {
-        if (controlVista == null) {
-            return;
-        }
-        String msg = "RESULT:" + coord + ":" + resultado.name();
-        try {
-            controlVista.enviarMensaje(msg);
-        } catch (Exception ex) {
-            System.err.println("Error enviando resultado: " + ex.getMessage());
-        }
-    }
-
-    private void procesarResultadoDisparo(String coord, ResultadoDisparo resultado) {
-        Casilla cas = buscarCasillaEnTablero(oponenteTablero, coord);
-        if (cas == null) {
-            return;
-        }
-        cas.setDañada(true);
-        if (resultado == ResultadoDisparo.IMPACTO || resultado == ResultadoDisparo.HUNDIDO) {
-            cas.setOcupada(true);
-        }
-
-        oponenteTablero.getDisparos().add(new Disparo(coord, resultado));
-
-        oponenteTablero.notificarObservadores("Resultado disparo " + coord + ": " + resultado);
     }
 
     private Casilla buscarCasillaEnTablero(Tablero tablero, String coord) {
         if (tablero == null || coord == null) {
             return null;
         }
-        coord = coord.trim().toUpperCase();
         for (Casilla c : tablero.getMatrizDeCasillas()) {
             if (c.getCoordenada().equalsIgnoreCase(coord)) {
                 return c;
@@ -306,9 +407,5 @@ public class ControlJuego {
             }
         }
         return false;
-    }
-
-    public Tablero getOponenteTablero() {
-        return oponenteTablero;
     }
 }

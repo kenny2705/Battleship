@@ -29,20 +29,16 @@ public class Acomodo extends javax.swing.JFrame {
     private ControlVista controlVista;
     private Jugador jugador;
 
-    // Componentes UI
     private JPanel panelTablero;
     private JPanel panelNaves;
     private JButton btnListo;
     private JButton btnOrientacion;
     private final Map<String, JButton> botonesCasillas = new HashMap<String, JButton>();
 
-    // Estado local para la Interacción de la Vista (Bajo acoplamiento)
     private Nave naveSeleccionada = null;
-    private int orientacion = 0; // 0=Horizontal, 1=Vertical
+    private int orientacion = 0;
 
-    // CONSTRUCTOR CORREGIDO: Ahora acepta 3 argumentos
     public Acomodo(Jugador jugador, ControlJuego controlJuego, ControlVista controlVista) {
-        // Almacenar las referencias
         this.jugador = jugador;
         this.controlJuego = controlJuego;
         this.controlVista = controlVista;
@@ -53,12 +49,10 @@ public class Acomodo extends javax.swing.JFrame {
         cargarNavesDisponibles();
     }
 
-    // Constructor sin parámetros (mantener para el IDE)
     public Acomodo() {
         initComponents();
     }
 
-    // --- LÓGICA DE LA VISTA (Solo Interacción y Presentación) ---
     private void inicializarComponentesPersonalizados() {
         if (jugador != null) {
             setTitle("Acomodo de Naves - " + jugador.getNombre());
@@ -66,39 +60,35 @@ public class Acomodo extends javax.swing.JFrame {
             setTitle("Acomodo de Naves");
         }
 
-        // Contenedores principales
-        getContentPane().setLayout(new java.awt.BorderLayout(10, 10)); // Espaciado
+        getContentPane().setLayout(new java.awt.BorderLayout(10, 10));
 
         Tablero tablero = jugador != null ? jugador.getTablero() : new Tablero(10, null);
         int n = tablero.getMedidas();
 
         panelTablero = new JPanel();
         panelTablero.setLayout(new GridLayout(n, n));
-        panelTablero.setPreferredSize(new Dimension(550, 550)); // Un poco más grande para que quepan bien
+        panelTablero.setPreferredSize(new Dimension(550, 550)); 
 
-        // Panel Derecho para Controles (Naves y Botones)
         JPanel panelControles = new JPanel();
         panelControles.setLayout(new javax.swing.BoxLayout(panelControles, javax.swing.BoxLayout.Y_AXIS));
         panelControles.setPreferredSize(new Dimension(220, 500));
 
-        // Panel para Naves
         panelNaves = new JPanel();
-        panelNaves.setLayout(new GridLayout(0, 1, 5, 5)); // Una columna, espaciado de 5px
+        panelNaves.setLayout(new GridLayout(0, 1, 5, 5)); 
         panelControles.add(new javax.swing.JLabel("Naves Disponibles:"));
         panelControles.add(panelNaves);
 
-        // Botón de Orientación
-        btnOrientacion = new JButton("Orientación: Horizontal");
+        btnOrientacion = new JButton("Orientacion: Horizontal");
         btnOrientacion.addActionListener(e -> cambiarOrientacion());
         panelControles.add(btnOrientacion);
 
-        // Botón Listo
+
         btnListo = new JButton("Listo para Batalla");
         btnListo.addActionListener(this::btnListoActionPerformed);
         btnListo.setEnabled(false); // Se habilita solo al completar
         panelControles.add(btnListo);
 
-        // Añadir componentes al JFrame
+
         getContentPane().add(panelTablero, java.awt.BorderLayout.CENTER);
         getContentPane().add(panelControles, java.awt.BorderLayout.EAST);
 
@@ -109,10 +99,10 @@ public class Acomodo extends javax.swing.JFrame {
     private void cambiarOrientacion() {
         orientacion = 1 - orientacion;
         String texto = orientacion == 0 ? "Horizontal" : "Vertical";
-        btnOrientacion.setText("Orientación: " + texto);
+        btnOrientacion.setText("Orientacion: " + texto);
 
         if (naveSeleccionada != null) {
-            JOptionPane.showMessageDialog(this, "Orientación cambiada a: " + texto + " para la nave " + naveSeleccionada.getTipo(), "Orientación", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Orientacion cambiada a: " + texto + " para la nave " + naveSeleccionada.getTipo(), "Orientacion", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -129,11 +119,9 @@ public class Acomodo extends javax.swing.JFrame {
                 JButton btn = new JButton(coordenada);
                 btn.setPreferredSize(new Dimension(50, 50));
 
-                // --- CORRECCIÓN VISUAL: Evita que salgan "..." en A10 ---
-                btn.setMargin(new java.awt.Insets(0, 0, 0, 0)); // Márgenes a 0
-                btn.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 10)); // Fuente pequeña y legible
-                // --------------------------------------------------------
-
+                btn.setMargin(new java.awt.Insets(0, 0, 0, 0)); 
+                btn.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 10)); 
+ 
                 btn.setBackground(java.awt.Color.CYAN);
                 btn.setOpaque(true);
                 btn.setBorderPainted(true);
@@ -158,7 +146,6 @@ public class Acomodo extends javax.swing.JFrame {
 
         if (navesDisponibles != null) {
             for (Nave nave : navesDisponibles) {
-                // Solo mostrar naves que NO han sido colocadas
                 if (!nave.isColocada()) {
                     JButton btnNave = new JButton(nave.getTipo() + " (" + nave.getTamanio() + ")");
                     btnNave.addActionListener(e -> seleccionarNave(nave, btnNave));
@@ -167,9 +154,7 @@ public class Acomodo extends javax.swing.JFrame {
             }
         }
 
-        // Lógica de autoselección
         if (naveSeleccionada == null && navesDisponibles != null) {
-            // Seleccionar la primera no colocada
             for (Nave n : navesDisponibles) {
                 if (!n.isColocada()) {
                     seleccionarNave(n, null);
@@ -187,7 +172,6 @@ public class Acomodo extends javax.swing.JFrame {
             return;
         }
 
-        // Resetear colores visuales en panelNaves
         for (java.awt.Component comp : panelNaves.getComponents()) {
             if (comp instanceof JButton) {
                 ((JButton) comp).setBackground(null);
@@ -221,9 +205,8 @@ public class Acomodo extends javax.swing.JFrame {
 
         if (colocada) {
             actualizarVistaTablero(tablero);
-            cargarNavesDisponibles(); // Esto eliminará el botón de la nave colocada del panel lateral
+            cargarNavesDisponibles();
 
-            // Deseleccionar para obligar a elegir la siguiente
             naveSeleccionada = null;
 
             if (controlJuego.verificarAcomodoCompleto(jugador)) {
@@ -232,7 +215,7 @@ public class Acomodo extends javax.swing.JFrame {
             }
         } else {
             JOptionPane.showMessageDialog(this,
-                    "No se puede colocar la nave aquí (fuera de límites o superposición).",
+                    "No se puede colocar la nave aqui (fuera de limites o superposicion).",
                     "Error de Acomodo",
                     JOptionPane.ERROR_MESSAGE);
         }
@@ -279,24 +262,7 @@ public class Acomodo extends javax.swing.JFrame {
                     JOptionPane.WARNING_MESSAGE);
         }
     }
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    // </editor-fold>
-
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {

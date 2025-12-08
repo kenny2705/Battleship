@@ -33,12 +33,9 @@ public class P2PManager {
         this.messageListener = listener;
     }
 
-    // ------------------------------
-    //  MODO SERVIDOR
-    // ------------------------------
+    //SERVIDOR
     public synchronized void startAsServer() {
 
-        // ★ SI YA HAY SERVIDOR ACTIVADO → NO ARRANCAR OTRA VEZ
         if (serverStarted) {
             System.out.println("DEBUG: Servidor ya estaba iniciado, NO se inicia otra vez.");
             return;
@@ -48,16 +45,16 @@ public class P2PManager {
             ServerPeer server = new ServerPeer(5000, connectionListener, messageListener);
             serverRef.set(server);
 
-            server.start();  // Solo se ejecuta una vez
+            server.start();  
 
-            serverStarted = true;  // ★ Marcar como iniciado
+            serverStarted = true;  
 
         } catch (IOException ex) {
             throw new RuntimeException("Error al iniciar el servidor", ex);
         }
     }
 
-    // Este método NO causa spam si startAsServer() se ejecuta solo una vez
+    // PREVENIR SPAM DEL INICIO DEL SERVIDOR
     public String getServerId() {
         ServerPeer server = serverRef.get();
         if (server != null) {
@@ -74,7 +71,7 @@ public class P2PManager {
 
         String[] parts = serverId.split(":");
         if (parts.length != 2) {
-            throw new IllegalArgumentException("Formato inválido host:port");
+            throw new IllegalArgumentException("Formato invalido host:port");
         }
 
         String host = parts[0];
@@ -92,13 +89,13 @@ public class P2PManager {
         } else if (clientRef.get() != null && clientRef.get().isConnected()) {
             clientRef.get().send(msg);
         } else {
-            throw new IOException("No hay conexión activa.");
+            throw new IOException("No hay conexion activa.");
         }
     }
 
     public synchronized void stop() {
 
-        serverStarted = false; // ★ Permitir iniciar de nuevo
+        serverStarted = false; 
 
         if (serverRef.get() != null) {
             serverRef.get().stopServer();

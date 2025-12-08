@@ -67,7 +67,6 @@ public class Nave {
         this.estadoNave = estadoNave;
     }
 
-    // métodos compatibles con la UI
     public TipoNave getTipo() {
         return getTipoNave();
     }
@@ -78,13 +77,13 @@ public class Nave {
         }
         switch (tipoNave) {
             case BARCO:
-                return 1;           // según tu nuevo requerimiento: BARCO = 1
+                return 1;   //BARCO = 1
             case SUBMARINO:
-                return 2;      // SUBMARINO = 2
+                return 2;   //SUBMARINO = 2
             case CRUCERO:
-                return 3;        // CRUCERO = 3
+                return 3;   //CRUCERO = 3
             case PORTA_AVIONES:
-                return 4;  // PORTA_AVIONES = 4
+                return 4;   //PORTA AVIONES = 4
             default:
                 return 0;
         }
